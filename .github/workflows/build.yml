@@ -1,0 +1,50 @@
+name: ELMDash build
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+          cache-disabled: true
+
+      - name: Compiler téléphone + montre
+        run: gradle :mobile:assembleRelease :wear:assembleRelease --no-daemon --stacktrace
+
+      - name: Nommer les APK avec le numéro de version
+        run: |
+          VER="1.${{ github.run_number }}"
+          mkdir -p dist
+          cp mobile/build/outputs/apk/release/*.apk "dist/ELMDash-telephone-v$VER.apk"
+          cp wear/build/outputs/apk/release/*.apk "dist/ELMDash-montre-v$VER.apk"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELMDash-v1.${{ github.run_number }}
+          path: dist/*.apk
+
+      # Les APK sont aussi publiés dans « Releases » : on les télécharge directement depuis le téléphone.
+      - name: Publier la version
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: ELMDash v1.${{ github.run_number }}
+          files: dist/*.apk
