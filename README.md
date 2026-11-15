@@ -12,6 +12,7 @@ Tableau de bord OBD-II pour téléphone Android **et** montre Wear OS, avec boî
 > La clé de signature est dans le dépôt pour que ce soit sans friction (appli personnelle). Si ton dépôt est public et que tu veux une clé privée, remplace `keystore/elmdash.p12` et les mots de passe dans `mobile/build.gradle.kts` et `wear/build.gradle.kts`. Attention : changer de clé oblige à désinstaller une fois.
 
 ## Protocoles
+- **K-line seul** : ISO 9141-2 / KWP uniquement (équivalent du « ISO » de FORScan).
 - **OBD-II ancien (défaut)** : ISO 9141-2, puis détection auto, J1850, KWP, puis CAN. Pour la Ford Probe 1997.
 - **OBD-II standard récent** : détection automatique puis CAN ISO 15765-4.
 - **FORScan** : CAN 11 bits 500 kbps, adressage physique 7E0, requêtes Mode 22 (PID perso).

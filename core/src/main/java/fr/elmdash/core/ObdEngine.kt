@@ -50,7 +50,7 @@ class ObdEngine(
                 set(Link.ADAPTER_OK, "Boîtier connecté · recherche du calculateur…")
                 if (!link.init(st.proto)) { link.close(); set(Link.ADAPTER_OK, "Boîtier OK mais calculateur muet (contact mis ?)"); delay(3000); continue }
                 Telemetry.adapterInfo.value = link.info
-                if (Telemetry.supported.value.isEmpty()) runCatching { scan(link) }
+                runCatching { scan(link) }      // liste des données lisibles, refaite à chaque connexion
                 val okLink = if (st.simulate) Link.SIM else Link.LIVE
                 val okMsg = if (st.simulate) "Simulation" else "Boîtier et calculateur OK"
                 set(okLink, okMsg)
@@ -72,7 +72,8 @@ class ObdEngine(
                             lastMil = now
                             link.milStatus()?.let { Telemetry.mil.value = it.first; Telemetry.dtcCount.value = it.second }
                         }
-                        val want = visible().flatMap { Pids.deps(it, s) }.toSet()
+                        val sup = Telemetry.supported.value
+                        val want = visible().flatMap { Pids.deps(it, s) }.filter { id -> sup.isEmpty() || id in sup || pm[id]?.group == "Perso" }.toSet()
                         var got = 0
                         for (id in want) {
                             val p = pm[id] ?: continue

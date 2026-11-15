@@ -18,6 +18,7 @@ enum class Kind { PLAIN, TEMP, CENTER }
 /** Protocole de dialogue avec le calculateur. */
 enum class ProtoMode(val label: String, val desc: String) {
     CLASSIC("OBD-II ancien (ISO 9141 / J1850)", "Défaut. Ford Probe 1997 et véhicules 1996-2003 : ISO 9141-2, KWP, J1850, puis CAN."),
+    ISO("K-line seul (ISO 9141 / KWP)", "Comme le « ISO » de FORScan : ISO 9141-2, puis KWP lent et rapide. Connexion la plus rapide sur une Probe."),
     STANDARD("OBD-II standard récent", "Détection automatique puis CAN ISO 15765-4. Pour les véhicules plus récents."),
     FORSCAN("FORScan (CAN + en-têtes ECU)", "CAN 500 kbps, adressage physique 7E0, requêtes Mode 22 (PID perso).")
 }

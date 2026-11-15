@@ -86,6 +86,7 @@ class ObdLink {
         header = null
         val order = when (mode) {
             ProtoMode.CLASSIC -> listOf("3", "0", "1", "5", "4", "2", "6", "7", "8", "9")
+            ProtoMode.ISO -> listOf("3", "5", "4")
             ProtoMode.STANDARD -> listOf("0", "6", "7", "8", "9", "5", "4", "3", "1", "2")
             ProtoMode.FORSCAN -> listOf("6", "8", "7", "9", "0")
         }
