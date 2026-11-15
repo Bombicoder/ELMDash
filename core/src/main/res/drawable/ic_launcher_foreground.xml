@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- rail discret : arc ouvert de 240°, jamais une boucle fermée -->
+    <path android:pathData="M29.75,68 A28,28 0 1,1 78.25,68"
+        android:strokeColor="#22FFFFFF" android:strokeWidth="10" android:strokeLineCap="round" />
+    <!-- arc dégradé : cyan, puis orange, puis rouge en fin de course -->
+    <path android:pathData="M29.75,68 A28,28 0 1,1 78.25,68" android:strokeWidth="7" android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient android:type="sweep" android:centerX="54" android:centerY="54">
+                <item android:offset="0.0" android:color="#FFFF4D4D" />
+                <item android:offset="0.08" android:color="#FFFF4D4D" />
+                <item android:offset="0.42" android:color="#FF22D3EE" />
+                <item android:offset="0.72" android:color="#FF22D3EE" />
+                <item android:offset="0.87" android:color="#FFFFB020" />
+                <item android:offset="1.0" android:color="#FFFF4D4D" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- aiguille -->
+    <path android:pathData="M54,54 L68,40" android:strokeColor="#FFFF4D4D" android:strokeWidth="3.5" android:strokeLineCap="round" />
+    <path android:pathData="M50,54 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" android:fillColor="#FFFF4D4D" />
+</vector>
