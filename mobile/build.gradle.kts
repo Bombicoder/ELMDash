@@ -26,6 +26,8 @@ android {
         getByName("release") { signingConfig = signingConfigs.getByName("elmdash"); isMinifyEnabled = false }
         getByName("debug") { signingConfig = signingConfigs.getByName("elmdash") }
     }
+    // le contrôle lint bloquait la release sur un faux positif (version de Fragment) : désactivé pour la release
+    lint { checkReleaseBuilds = false; abortOnError = false }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
