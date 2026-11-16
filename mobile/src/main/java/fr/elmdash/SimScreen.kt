@@ -41,7 +41,7 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Section("Activation") {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(s.simulate, { app.setSettings(s.copy(simulate = it)); Telemetry.reconnect.value = true }); Spacer(Modifier.width(8.dp))
+                    Switch(s.simulate, { app.updateSettings(s.copy(simulate = it)); Telemetry.reconnect.value = true }); Spacer(Modifier.width(8.dp))
                     Text(if (s.simulate) "Simulation active : les données viennent d'ici" else "Simulation désactivée (voiture réelle)", fontSize = 13.sp)
                 }
                 LinkLeds(link, 14.dp, labels = true)

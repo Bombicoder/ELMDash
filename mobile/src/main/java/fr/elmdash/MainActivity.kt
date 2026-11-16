@@ -104,23 +104,23 @@ class AppState(val store: ConfigStore) {
     var warm by mutableStateOf(store.warm)
         private set
 
-    fun setPages(p: List<PageCfg>) { pages = p; store.pages = p }
-    fun setSettings(s: Settings) { settings = s; store.settings = s }
-    fun setCustom(c: List<PidDef>) { custom = c; store.customPids = c }
-    fun setWarm(w: WarmCfg) { warm = w; store.warm = w }
+    fun updatePages(p: List<PageCfg>) { pages = p; store.pages = p }
+    fun updateSettings(s: Settings) { settings = s; store.settings = s }
+    fun updateCustom(c: List<PidDef>) { custom = c; store.customPids = c }
+    fun updateWarm(w: WarmCfg) { warm = w; store.warm = w }
 
     fun saveGauge(et: EditorTarget, cfg: GaugeCfg, target: Int) {
-        if (pages.isEmpty()) { setPages(listOf(PageCfg("Page 1", listOf(cfg)))); return }
+        if (pages.isEmpty()) { updatePages(listOf(PageCfg("Page 1", listOf(cfg)))); return }
         val lists = pages.map { it.gauges.toMutableList() }
         val t = target.coerceIn(0, lists.size - 1); val p = et.page.coerceIn(0, lists.size - 1)
         if (et.index >= 0 && et.index < lists[p].size) {
             if (t == p) lists[p][et.index] = cfg else { lists[p].removeAt(et.index); lists[t].add(cfg) }
         } else lists[t].add(cfg)
-        setPages(pages.mapIndexed { i, pg -> pg.copy(gauges = lists[i]) })
+        updatePages(pages.mapIndexed { i, pg -> pg.copy(gauges = lists[i]) })
     }
 
     fun deleteGauge(et: EditorTarget) {
-        setPages(pages.mapIndexed { i, pg -> if (i == et.page) pg.copy(gauges = pg.gauges.filterIndexed { j, _ -> j != et.index }) else pg })
+        updatePages(pages.mapIndexed { i, pg -> if (i == et.page) pg.copy(gauges = pg.gauges.filterIndexed { j, _ -> j != et.index }) else pg })
     }
 }
 
@@ -171,7 +171,7 @@ fun Dashboard(app: AppState, onSettings: () -> Unit, onSim: () -> Unit, onDtc: (
         }
         if (pages.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
-                Button({ app.setPages(listOf(PageCfg("Page 1", emptyList()))) }) { Text("Créer une première page") }
+                Button({ app.updatePages(listOf(PageCfg("Page 1", emptyList()))) }) { Text("Créer une première page") }
             }
         } else {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

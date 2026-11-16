@@ -83,25 +83,25 @@ private fun BoxSection(app: AppState, onSim: () -> Unit) {
         OutlinedButton({ Telemetry.reconnect.value = true }) { Text("Reconnecter maintenant") }
     }
     Section("Protocole") {
-        ProtoMode.values().forEach { m -> OptionCard(m.label, m.desc, s.proto == m) { app.setSettings(s.copy(proto = m)); Telemetry.reconnect.value = true } }
+        ProtoMode.values().forEach { m -> OptionCard(m.label, m.desc, s.proto == m) { app.updateSettings(s.copy(proto = m)); Telemetry.reconnect.value = true } }
         Text("Ford Probe 1997 : garde « OBD-II ancien ». Le changement est appliqué tout de suite (reconnexion).", fontSize = 12.sp, color = GaugeGrey)
     }
     Section("Boîtier ELM327") {
         Text("1) Appaire le boîtier dans les réglages Bluetooth d'Android (code 1234 ou 0000). 2) Choisis-le ici.", fontSize = 12.sp, color = GaugeGrey)
         OutlinedButton({ ctx.startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)) }) { Text("Ouvrir les réglages Bluetooth") }
-        OptionCard("Détection automatique", "Premier appareil nommé OBD, ELM, V-LINK, VGATE…", s.deviceMac.isEmpty()) { app.setSettings(s.copy(deviceMac = "")) }
-        devices.forEach { (n, a) -> OptionCard(n, a, s.deviceMac == a) { app.setSettings(s.copy(deviceMac = a)) } }
+        OptionCard("Détection automatique", "Premier appareil nommé OBD, ELM, V-LINK, VGATE…", s.deviceMac.isEmpty()) { app.updateSettings(s.copy(deviceMac = "")) }
+        devices.forEach { (n, a) -> OptionCard(n, a, s.deviceMac == a) { app.updateSettings(s.copy(deviceMac = a)) } }
         if (devices.isEmpty()) Text("Aucun appareil appairé (ou permission Bluetooth refusée).", fontSize = 12.sp, color = GaugeAmber)
     }
     Section("Montre autonome") {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(s.watchDirect, { app.setSettings(s.copy(watchDirect = it)) }); Spacer(Modifier.width(8.dp))
+            Switch(s.watchDirect, { app.updateSettings(s.copy(watchDirect = it)) }); Spacer(Modifier.width(8.dp))
             Text("Le boîtier est utilisé par la montre (le téléphone ne s'y connecte pas)", fontSize = 13.sp)
         }
     }
     Section("Simulation") {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(s.simulate, { app.setSettings(s.copy(simulate = it)); Telemetry.reconnect.value = true }); Spacer(Modifier.width(8.dp))
+            Switch(s.simulate, { app.updateSettings(s.copy(simulate = it)); Telemetry.reconnect.value = true }); Spacer(Modifier.width(8.dp))
             Text("Mode simulation (sans voiture ni boîtier)", fontSize = 13.sp)
         }
         Button(onSim) { Text("Ouvrir le simulateur") }
@@ -122,7 +122,7 @@ private fun DataSection(app: AppState) {
         if (!live) Text("Connecte-toi au boîtier (deux voyants verts ou violets) pour lister les données.", fontSize = 12.sp, color = GaugeGrey)
         if (sup.isNotEmpty()) {
             Text("${found.values.sumOf { it.size }} données disponibles. Seul ce que ta voiture déclare apparaît (pas de turbo = pas de pression de suralimentation).", fontSize = 12.sp, color = GaugeGrey)
-            Button({ app.setPages(autoPages(sup, app.custom)) }) { Text("Créer des pages adaptées à mon calculateur") }
+            Button({ app.updatePages(autoPages(sup, app.custom)) }) { Text("Créer des pages adaptées à mon calculateur") }
         }
     }
     found.forEach { (group, list) ->
@@ -157,19 +157,19 @@ private fun FuelSection(app: AppState) {
     val s = app.settings
     Section("Carburant et éthanol") {
         Text("Éthanol dans le réservoir : ${s.ethanolPct.roundToInt()} %")
-        Slider(s.ethanolPct.toFloat(), { app.setSettings(s.copy(ethanolPct = it.roundToInt().toDouble())) }, valueRange = 0f..100f)
-        Row(verticalAlignment = Alignment.CenterVertically) { Switch(s.boxEnabled, { app.setSettings(s.copy(boxEnabled = it)) }); Spacer(Modifier.width(8.dp)); Text("Boîtier éthanol (l'ECU croit brûler du SP95)", fontSize = 13.sp) }
+        Slider(s.ethanolPct.toFloat(), { app.updateSettings(s.copy(ethanolPct = it.roundToInt().toDouble())) }, valueRange = 0f..100f)
+        Row(verticalAlignment = Alignment.CenterVertically) { Switch(s.boxEnabled, { app.updateSettings(s.copy(boxEnabled = it)) }); Spacer(Modifier.width(8.dp)); Text("Boîtier éthanol (l'ECU croit brûler du SP95)", fontSize = 13.sp) }
         Text("Éthanol du carburant de référence ECU : ${s.ecuRefEthanol.roundToInt()} %")
-        Slider(s.ecuRefEthanol.toFloat(), { app.setSettings(s.copy(ecuRefEthanol = it.roundToInt().toDouble())) }, valueRange = 0f..10f)
+        Slider(s.ecuRefEthanol.toFloat(), { app.updateSettings(s.copy(ecuRefEthanol = it.roundToInt().toDouble())) }, valueRange = 0f..10f)
         Text("Enrichissement estimé : ×%.2f".format(FuelMath.enrichment(s.ethanolPct / 100, s.ecuRefEthanol / 100)), color = GaugeCyan)
     }
     Section("Calcul de la consommation") {
-        OptionCard("Débit d'air (MAF + lambda)", "Marche sur toute voiture qui lit le débit d'air.", s.fuelMode == FuelMode.MAF) { app.setSettings(s.copy(fuelMode = FuelMode.MAF)) }
-        OptionCard("Injecteurs", "Nécessite un PID perso « INJ_PW » (largeur d'impulsion, ms).", s.fuelMode == FuelMode.INJECTOR) { app.setSettings(s.copy(fuelMode = FuelMode.INJECTOR)) }
+        OptionCard("Débit d'air (MAF + lambda)", "Marche sur toute voiture qui lit le débit d'air.", s.fuelMode == FuelMode.MAF) { app.updateSettings(s.copy(fuelMode = FuelMode.MAF)) }
+        OptionCard("Injecteurs", "Nécessite un PID perso « INJ_PW » (largeur d'impulsion, ms).", s.fuelMode == FuelMode.INJECTOR) { app.updateSettings(s.copy(fuelMode = FuelMode.INJECTOR)) }
         if (s.fuelMode == FuelMode.INJECTOR) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumField("Cylindres", s.cylinders.toDouble(), Modifier.weight(1f)) { v -> v?.let { app.setSettings(s.copy(cylinders = it.toInt().coerceIn(1, 12))) } }
-            NumField("Injecteur cc/min", s.injectorCcMin, Modifier.weight(1f)) { v -> v?.let { app.setSettings(s.copy(injectorCcMin = it)) } }
-            NumField("Temps mort ms", s.deadTimeMs, Modifier.weight(1f)) { v -> v?.let { app.setSettings(s.copy(deadTimeMs = it)) } }
+            NumField("Cylindres", s.cylinders.toDouble(), Modifier.weight(1f)) { v -> v?.let { app.updateSettings(s.copy(cylinders = it.toInt().coerceIn(1, 12))) } }
+            NumField("Injecteur cc/min", s.injectorCcMin, Modifier.weight(1f)) { v -> v?.let { app.updateSettings(s.copy(injectorCcMin = it)) } }
+            NumField("Temps mort ms", s.deadTimeMs, Modifier.weight(1f)) { v -> v?.let { app.updateSettings(s.copy(deadTimeMs = it)) } }
         }
         Text("Conso instantanée (L/100 et L/h) et depuis le début du trajet (⟲ en haut du tableau de bord pour remettre à zéro).", fontSize = 12.sp, color = GaugeGrey)
         OutlinedButton({ Telemetry.tripReset.value = true }) { Text("Remettre le trajet à zéro") }
@@ -181,23 +181,23 @@ private fun WatchSection(app: AppState) {
     val s = app.settings; val w = app.warm
     Section("Taille du cadran sur la montre") {
         Text("${(s.watchScale * 100).roundToInt()} %")
-        Slider(s.watchScale.toFloat(), { app.setSettings(s.copy(watchScale = (it * 20).roundToInt() / 20.0)) }, valueRange = 0.6f..1.6f)
+        Slider(s.watchScale.toFloat(), { app.updateSettings(s.copy(watchScale = (it * 20).roundToInt() / 20.0)) }, valueRange = 0.6f..1.6f)
         Text("100 % = cadran ajusté à l'écran. Au-delà, il déborde un peu pour remplir l'écran rond. Réglable aussi sur la montre.", fontSize = 12.sp, color = GaugeGrey)
     }
     Section("Montée en température") {
         Text("Jauge dans le cadran qui se remplit pendant la chauffe (de plus en plus rouge), clignote vert avec vibration quand c'est prêt, puis disparaît. Rouge + vibration en cas de surchauffe.", fontSize = 12.sp, color = GaugeGrey)
-        Row(verticalAlignment = Alignment.CenterVertically) { Switch(w.enabled, { app.setWarm(w.copy(enabled = it)) }); Spacer(Modifier.width(8.dp)); Text("Activer") }
+        Row(verticalAlignment = Alignment.CenterVertically) { Switch(w.enabled, { app.updateWarm(w.copy(enabled = it)) }); Spacer(Modifier.width(8.dp)); Text("Activer") }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = w.pid == "COOLANT", onClick = { app.setWarm(w.copy(pid = "COOLANT")) }, label = { Text("Eau") })
-            FilterChip(selected = w.pid == "OIL", onClick = { app.setWarm(w.copy(pid = "OIL")) }, label = { Text("Huile") })
+            FilterChip(selected = w.pid == "COOLANT", onClick = { app.updateWarm(w.copy(pid = "COOLANT")) }, label = { Text("Eau") })
+            FilterChip(selected = w.pid == "OIL", onClick = { app.updateWarm(w.copy(pid = "OIL")) }, label = { Text("Huile") })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            NumField("Prêt à (°C)", w.ready, Modifier.weight(1f)) { v -> v?.let { app.setWarm(w.copy(ready = it)) } }
-            NumField("Surchauffe (°C)", w.hot, Modifier.weight(1f)) { v -> v?.let { app.setWarm(w.copy(hot = it)) } }
+            NumField("Prêt à (°C)", w.ready, Modifier.weight(1f)) { v -> v?.let { app.updateWarm(w.copy(ready = it)) } }
+            NumField("Surchauffe (°C)", w.hot, Modifier.weight(1f)) { v -> v?.let { app.updateWarm(w.copy(hot = it)) } }
         }
     }
     Section("Codes défaut sur la montre") {
-        Row(verticalAlignment = Alignment.CenterVertically) { Switch(s.watchDtc, { app.setSettings(s.copy(watchDtc = it)) }); Spacer(Modifier.width(8.dp)); Text("Page « codes défaut » + témoin moteur", fontSize = 13.sp) }
+        Row(verticalAlignment = Alignment.CenterVertically) { Switch(s.watchDtc, { app.updateSettings(s.copy(watchDtc = it)) }); Spacer(Modifier.width(8.dp)); Text("Page « codes défaut » + témoin moteur", fontSize = 13.sp) }
     }
 }
 
@@ -209,19 +209,19 @@ private fun PagesSection(app: AppState) {
         Text("Touche un cadran dans le tableau de bord pour le modifier ; le bouton ＋ en ajoute un. Ici : gérer les pages.", fontSize = 12.sp, color = GaugeGrey)
         pages.forEachIndexed { i, p ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(p.name, { n -> app.setPages(pages.mapIndexed { j, q -> if (j == i) q.copy(name = n) else q }) },
+                OutlinedTextField(p.name, { n -> app.updatePages(pages.mapIndexed { j, q -> if (j == i) q.copy(name = n) else q }) },
                     Modifier.weight(1f), singleLine = true, label = { Text("${p.gauges.size} cadran(s)") })
-                TextButton({ if (i > 0) app.setPages(pages.toMutableList().also { l -> l.add(i - 1, l.removeAt(i)) }) }) { Text("↑") }
-                TextButton({ if (i < pages.size - 1) app.setPages(pages.toMutableList().also { l -> l.add(i + 1, l.removeAt(i)) }) }) { Text("↓") }
-                TextButton({ app.setPages(pages.filterIndexed { j, _ -> j != i }) }) { Text("✕", color = GaugeRed) }
+                TextButton({ if (i > 0) app.updatePages(pages.toMutableList().also { l -> l.add(i - 1, l.removeAt(i)) }) }) { Text("↑") }
+                TextButton({ if (i < pages.size - 1) app.updatePages(pages.toMutableList().also { l -> l.add(i + 1, l.removeAt(i)) }) }) { Text("↓") }
+                TextButton({ app.updatePages(pages.filterIndexed { j, _ -> j != i }) }) { Text("✕", color = GaugeRed) }
             }
         }
-        OutlinedButton({ app.setPages(pages + PageCfg("Page ${pages.size + 1}", emptyList())) }) { Text("＋ Ajouter une page") }
+        OutlinedButton({ app.updatePages(pages + PageCfg("Page ${pages.size + 1}", emptyList())) }) { Text("＋ Ajouter une page") }
     }
     Section("Modèles") {
-        Button({ app.setPages(autoPages(sup, app.custom)) }, enabled = sup.isNotEmpty()) { Text("Pages adaptées à mon calculateur") }
+        Button({ app.updatePages(autoPages(sup, app.custom)) }, enabled = sup.isNotEmpty()) { Text("Pages adaptées à mon calculateur") }
         if (sup.isEmpty()) Text("Disponible après le scan du calculateur (voir « Données »).", fontSize = 12.sp, color = GaugeGrey)
-        OutlinedButton({ app.setPages(Defaults.pages) }) { Text("Revenir aux pages par défaut") }
+        OutlinedButton({ app.updatePages(Defaults.pages) }) { Text("Revenir aux pages par défaut") }
     }
 }
 
@@ -235,7 +235,7 @@ private fun AdvSection(app: AppState, version: String) {
             fontSize = 12.sp, color = GaugeGrey)
         OutlinedTextField(text, { t ->
             text = t
-            runCatching { Codec.pidsFromJson(JSONArray(t)) }.onSuccess { app.setCustom(it); err = false }.onFailure { err = true }
+            runCatching { Codec.pidsFromJson(JSONArray(t)) }.onSuccess { app.updateCustom(it); err = false }.onFailure { err = true }
         }, Modifier.fillMaxWidth(), minLines = 6, isError = err, supportingText = { if (err) Text("JSON invalide") })
     }
     Section("À propos") { Text("ELMDash v$version", fontSize = 14.sp); Text("Téléphone + montre Wear OS · ELM327 Bluetooth", fontSize = 12.sp, color = GaugeGrey) }
