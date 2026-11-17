@@ -169,7 +169,8 @@ fun WatchApp(act: WearMain) {
     val dtcPage = st.watchDtc
     val total = gauges.size + (if (dtcPage) 1 else 0) + 1            // + codes défaut + réglages
     val pager = rememberPagerState { total }
-    val warmUi = rememberWarmUi(values[warmCfg.pid], warmCfg) { long -> buzz(ctx, long) }
+    val needWarm = warmCfg.enabled && gauges.any { it.warm }                 // au moins un cadran a la jauge de chauffe cochée
+    val warmUi = rememberWarmUi(values[warmCfg.pid], warmCfg.copy(enabled = needWarm)) { long -> buzz(ctx, long) }
 
     // Luminosité : fixée par l'appli, modifiable seulement par double-tap (haut = + / bas = −)
     var showB by remember { mutableStateOf(false) }; var firstB by remember { mutableStateOf(true) }
@@ -187,7 +188,7 @@ fun WatchApp(act: WearMain) {
     // PID à lire : le(s) cadran(s) affiché(s) + la température surveillée, quel que soit le cadran
     LaunchedEffect(pager.currentPage, gauges, warmCfg, direct) {
         val g = gauges.getOrNull(pager.currentPage)
-        val ids = ((if (g != null) Pids.idsOf(g) else emptyList()) + (if (warmCfg.enabled) listOf(warmCfg.pid) else emptyList())).distinct()
+        val ids = ((if (g != null) Pids.idsOf(g) else emptyList()) + (if (needWarm) listOf(warmCfg.pid) else emptyList())).distinct()
         if (direct) WatchState.visible.value = ids.toSet() else runCatching { WearSync.sendVisible(ctx, ids) }
     }
 
@@ -199,7 +200,7 @@ fun WatchApp(act: WearMain) {
             .graphicsLayer { rotationZ = rot; scaleX = scale; scaleY = scale }
             .pointerInput(Unit) { detectTapGestures(onDoubleTap = { o -> WatchState.addBright(ctx, if (o.y < size.height / 2f) 0.1f else -0.1f) }) }) {
 
-            CompositionLocalProvider(LocalWarm provides warmUi) {
+            CompositionLocalProvider(LocalWarm provides warmUi, LocalOled provides true) {
                 HorizontalPager(pager, Modifier.fillMaxSize()
                     .onRotaryScrollEvent { e ->                      // molette : change de cadran
                         acc += e.verticalScrollPixels
@@ -224,7 +225,7 @@ fun WatchApp(act: WearMain) {
                 if (mil && dtcPage) { Text("⚠", color = GaugeAmber, fontSize = 10.sp); Spacer(Modifier.width(3.dp)) }
                 if (total <= 8) repeat(total) { i ->
                     Box(Modifier.padding(1.5.dp).size(if (i == pager.currentPage) 5.dp else 3.dp).background(if (i == pager.currentPage) GaugeCyan else Color(0x55FFFFFF), CircleShape))
-                } else Text("${pager.currentPage + 1}/$total", fontSize = 9.sp, color = GaugeGrey)
+                } else Text("${pager.currentPage + 1}/$total", fontSize = 8.sp, color = Color(0x88FFFFFF))
             }
             AnimatedVisibility(showB, Modifier.align(Alignment.Center)) { BrightnessBadge(bright) }
         }
@@ -243,7 +244,7 @@ private fun BrightnessBadge(b: Float) {
 @Composable
 private fun Chip(text: String, on: Boolean = false, onClick: () -> Unit) {
     Text(text, fontSize = 12.sp, color = if (on) Color.Black else Color.White, textAlign = TextAlign.Center,
-        modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (on) GaugeCyan else Color(0xFF26323D)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp))
+        modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (on) GaugeCyan else Color(0xFF1C1C1C)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 6.dp))
 }
 
 /** Page défilante à la molette. */

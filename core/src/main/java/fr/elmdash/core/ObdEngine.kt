@@ -82,6 +82,7 @@ class ObdEngine(
                         }
                         val t = System.nanoTime(); val dt = (t - last) / 1e9; last = t
                         vals.putAll(fuel.compute(vals, s, dt))
+                        if (st.simulate) Sim.state.value.overrides.forEach { (k, ov) -> if (Pids.virtual.any { it.id == k }) vals[k] = ov }
                         if (got > 0) { if (silent > 3 || Telemetry.link.value != okLink) set(okLink, okMsg); silent = 0 }
                         else if (want.isNotEmpty() && ++silent == 4) set(Link.ADAPTER_OK, "Boîtier OK · calculateur muet (contact ?)")
                         if (got == 0) delay(500)

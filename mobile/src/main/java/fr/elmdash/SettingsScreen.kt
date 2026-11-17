@@ -185,7 +185,7 @@ private fun WatchSection(app: AppState) {
         Text("100 % = cadran ajusté à l'écran. Au-delà, il déborde un peu pour remplir l'écran rond. Réglable aussi sur la montre.", fontSize = 12.sp, color = GaugeGrey)
     }
     Section("Montée en température") {
-        Text("Jauge dans le cadran qui se remplit pendant la chauffe (de plus en plus rouge), clignote vert avec vibration quand c'est prêt, puis disparaît. Rouge + vibration en cas de surchauffe.", fontSize = 12.sp, color = GaugeGrey)
+        Text("Source et seuils de la jauge de chauffe. Elle s’affiche sur les cadrans où tu as coché « Afficher la montée en température » (touche un cadran pour le régler) : bleu → rouge en chauffant, clignote vert quand c’est prêt (vibration) puis disparaît ; clignote rouge en cas de surchauffe.", fontSize = 12.sp, color = GaugeGrey)
         Row(verticalAlignment = Alignment.CenterVertically) { Switch(w.enabled, { app.updateWarm(w.copy(enabled = it)) }); Spacer(Modifier.width(8.dp)); Text("Activer") }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = w.pid == "COOLANT", onClick = { app.updateWarm(w.copy(pid = "COOLANT")) }, label = { Text("Eau") })

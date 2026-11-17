@@ -42,7 +42,8 @@ data class Meta(val id: String, val label: String, val unit: String, val min: Do
 
 /** Un cadran : une lecture principale + des lectures supplémentaires affichées ensemble (même unité). */
 data class GaugeCfg(val pid: String, val min: Double, val max: Double, val warn: Double?, val decimals: Int,
-                    val label: String? = null, val style: Style? = null, val extra: List<String> = emptyList())
+                    val label: String? = null, val style: Style? = null, val extra: List<String> = emptyList(),
+                    val warm: Boolean = false)      // afficher la jauge de montée en température sur ce cadran
 data class PageCfg(val name: String, val gauges: List<GaugeCfg>)
 enum class FuelMode { INJECTOR, MAF }
 data class WarmCfg(val enabled: Boolean = true, val pid: String = "COOLANT", val ready: Double = 85.0, val hot: Double = 108.0)
@@ -167,7 +168,7 @@ object Telemetry {
 
 object Defaults {
     val pages = listOf(
-        PageCfg("Moteur", listOf(GaugeCfg("RPM", 0.0, 7000.0, 6200.0, 0), GaugeCfg("COOLANT", 40.0, 130.0, 105.0, 0))),
+        PageCfg("Moteur", listOf(GaugeCfg("RPM", 0.0, 7000.0, 6200.0, 0), GaugeCfg("COOLANT", 40.0, 130.0, 105.0, 0, null, null, emptyList(), true))),
         PageCfg("Conso", listOf(
             GaugeCfg("FUEL_L100", 0.0, 30.0, 20.0, 1, null, Style.DIAL, listOf("FUEL_AVG")),
             GaugeCfg("FUEL_LH", 0.0, 40.0, null, 1))),
@@ -182,7 +183,7 @@ object Codec {
         p.forEach { pg ->
             put(JSONObject().put("name", pg.name).put("g", JSONArray().apply {
                 pg.gauges.forEach { g ->
-                    put(JSONObject().put("pid", g.pid).put("min", g.min).put("max", g.max).put("dec", g.decimals).also { o ->
+                    put(JSONObject().put("pid", g.pid).put("min", g.min).put("max", g.max).put("dec", g.decimals).put("warm", g.warm).also { o ->
                         g.warn?.let { o.put("warn", it) }; g.label?.let { o.put("label", it) }; g.style?.let { o.put("style", it.name) }
                         if (g.extra.isNotEmpty()) o.put("extra", JSONArray(g.extra))
                     })
@@ -199,7 +200,7 @@ object Codec {
             GaugeCfg(g.getString("pid"), g.getDouble("min"), g.getDouble("max"),
                 if (g.has("warn")) g.getDouble("warn") else null, g.optInt("dec", 0), g.optString("label").ifEmpty { null },
                 runCatching { Style.valueOf(g.optString("style")) }.getOrNull(),
-                if (ex == null) emptyList() else (0 until ex.length()).map { k -> ex.getString(k) })
+                if (ex == null) emptyList() else (0 until ex.length()).map { k -> ex.getString(k) }, g.optBoolean("warm", true))
         })
     }
 

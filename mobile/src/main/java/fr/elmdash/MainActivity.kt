@@ -155,8 +155,11 @@ fun Dashboard(app: AppState, onSettings: () -> Unit, onSim: () -> Unit, onDtc: (
     var editor by remember { mutableStateOf<EditorTarget?>(null) }
     val pager = rememberPagerState { pages.size.coerceAtLeast(1) }
 
-    LaunchedEffect(pager.currentPage, pages) {
-        Telemetry.phoneVisible.value = pages.getOrNull(pager.currentPage)?.gauges?.flatMap { Pids.idsOf(it) }?.toSet() ?: emptySet()
+    val needWarm = app.warm.enabled && pages.any { p -> p.gauges.any { it.warm } }
+    val warmUi = rememberWarmUi(values[app.warm.pid], app.warm.copy(enabled = needWarm)) { }     // pas de vibration sur le téléphone
+    LaunchedEffect(pager.currentPage, pages, needWarm, app.warm.pid) {
+        val ids = pages.getOrNull(pager.currentPage)?.gauges?.flatMap { Pids.idsOf(it) }?.toSet() ?: emptySet()
+        Telemetry.phoneVisible.value = if (needWarm) ids + app.warm.pid else ids
     }
 
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
@@ -180,8 +183,10 @@ fun Dashboard(app: AppState, onSettings: () -> Unit, onSim: () -> Unit, onDtc: (
                 }
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                HorizontalPager(pager, Modifier.fillMaxSize()) { i ->
-                    GaugePage(pages[i].gauges, values, app.custom, onGaugeClick = { gi -> editor = EditorTarget(i, gi) })
+                CompositionLocalProvider(LocalWarm provides warmUi) {
+                    HorizontalPager(pager, Modifier.fillMaxSize()) { i ->
+                        GaugePage(pages[i].gauges, values, app.custom, onGaugeClick = { gi -> editor = EditorTarget(i, gi) })
+                    }
                 }
                 FloatingActionButton(
                     onClick = { editor = EditorTarget(pager.currentPage.coerceIn(0, pages.size - 1), -1) },

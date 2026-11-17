@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -159,10 +162,17 @@ fun GaugeEditorDialog(
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 NumField("Min", c.min, Modifier.weight(1f)) { v -> v?.let { x -> cfg = cfg?.copy(min = x) } }
                                 NumField("Max", c.max, Modifier.weight(1f)) { v -> v?.let { x -> cfg = cfg?.copy(max = x) } }
-                                NumField("Alerte", c.warn, Modifier.weight(1f)) { v -> cfg = cfg?.copy(warn = v) }
+                                NumField(if ((c.style ?: m.style) == Style.DIAL) "Limite (rouge)" else "Alerte", c.warn, Modifier.weight(1f)) { v -> cfg = cfg?.copy(warn = v) }
                             }
                         }
                         TextButton({ cfg = c.copy(min = m.min, max = m.max, warn = m.warn); resetN++ }) { Text("Échelle automatique") }
+                        if ((c.style ?: m.style) == Style.DIAL) Text("Manomètre « shift light » : de la moitié de la plage jusqu'à la limite, tout le cadran vire à l'orange puis au rouge, et clignote en rouge à la limite (rupteur). Règle la limite ici (ex. 6200 tr/min).", fontSize = 11.sp, color = GaugeGrey)
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(c.warm, { on -> cfg = cfg?.copy(warm = on) }); Spacer(Modifier.width(8.dp))
+                            Text("Afficher la montée en température sur ce cadran", color = Color.White, fontSize = 13.sp)
+                        }
+                        if (c.warm) Text("Jauge intérieure à la forme du cadran : bleu → rouge pendant la chauffe, clignote en vert quand c'est assez chaud puis disparaît. Surchauffe : elle clignote en rouge. Source et seuils : Réglages › Montre.", fontSize = 11.sp, color = GaugeGrey)
 
                         OutlinedTextField(c.label ?: "", { t -> cfg = cfg?.copy(label = t.ifBlank { null }) }, Modifier.fillMaxWidth(),
                             singleLine = true, label = { Text("Nom affiché (optionnel)") })

@@ -23,3 +23,9 @@ Tableau de bord OBD-II pour téléphone Android **et** montre Wear OS, avec boî
 - Simulation complète : Réglages › Boîtier › Ouvrir le simulateur (la montre réagit en direct).
 - Montre : molette = changer de page, double-tap haut/bas = luminosité, écran toujours allumé, taille et rotation réglables, connexion directe au boîtier sans téléphone (un ELM327 n'accepte qu'un client : activer « Boîtier utilisé par la montre » côté téléphone).
 - Si l'appli plante, le rapport s'affiche au lancement suivant (bouton Copier).
+
+## Nouveautés
+- Simulateur : un curseur pour CHAQUE donnée (régime, températures, lambda, trims, consommation…), tests « démarrage à froid » et « surchauffe » avec vitesse réglable.
+- Montée en température : case à cocher sur chaque cadran (touche le cadran). Jauge intérieure bleu → rouge, clignote vert quand c'est prêt, disparaît ; clignote rouge en surchauffe.
+- Manomètre : l'arc vire à l'orange puis au rouge en approchant de la limite (champ « Limite (rouge) » du cadran, ex. 6200 tr/min pour le régime).
+- Montre OLED : fonds noirs purs, plus de rectangles de fond.

@@ -81,6 +81,30 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
                 }
                 Text("Le téléphone et la montre peuvent lire puis effacer ces codes.", fontSize = 12.sp, color = GaugeGrey)
             }
+            Section("Test : montée en température") {
+                Text("1) Coche « Afficher la montée en température » sur un cadran (touche le cadran). 2) Lance un test ci-dessous. 3) Ouvre ce cadran sur la montre.", fontSize = 12.sp, color = GaugeGrey)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button({
+                        app.updateSettings(s.copy(simulate = true))
+                        Sim.update { it.copy(scenario = Scenario.COLD, overrides = it.overrides - "COOLANT" - "OIL") }; Sim.t0 = System.nanoTime(); Telemetry.reconnect.value = true
+                    }) { Text("▶ Démarrage à froid") }
+                    Button({
+                        app.updateSettings(s.copy(simulate = true))
+                        Sim.update { it.copy(scenario = Scenario.OVERHEAT, overrides = it.overrides - "COOLANT" - "OIL") }; Sim.t0 = System.nanoTime(); Telemetry.reconnect.value = true
+                    }) { Text("▶ Surchauffe") }
+                }
+                Text("Vitesse du test", fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1.0, 3.0, 10.0).forEach { x -> FilterChip(selected = sim.timeScale == x, onClick = { Sim.update { it.copy(timeScale = x) } }, label = { Text("×${x.toInt()}") }) }
+                }
+            }
+            Section("Toutes les données (curseurs)") {
+                Text("Déplace un curseur pour forcer la valeur de n'importe quelle donnée ; « auto » rend la main au scénario. Les consommations se recalculent seules, sauf si tu les forces.", fontSize = 12.sp, color = GaugeGrey)
+                OutlinedButton({ Sim.update { it.copy(overrides = emptyMap()) } }, enabled = sim.overrides.isNotEmpty()) { Text("Tout remettre en auto (${sim.overrides.size})") }
+            }
+            Pids.allMeta(emptyList()).groupBy { it.group }.forEach { (group, list) ->
+                Section(group) { list.forEach { m -> OverrideRow(m, sim.overrides[m.id]) } }
+            }
             Section("Pannes de liaison") {
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(sim.adapterAbsent, { v -> Sim.update { it.copy(adapterAbsent = v) } }); Spacer(Modifier.width(8.dp)); Text("Boîtier absent (voyant 1 rouge)", fontSize = 13.sp) }
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(sim.ecuMute, { v -> Sim.update { it.copy(ecuMute = v) } }); Spacer(Modifier.width(8.dp)); Text("Calculateur muet (voyant 2 orange)", fontSize = 13.sp) }
@@ -91,5 +115,19 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+private fun OverrideRow(m: Meta, value: Double?) {
+    val v = value ?: ((m.min + m.max) / 2)
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${m.label} : " + (if (value == null) "auto" else "%.${m.decimals}f ${m.unit}".format(value)), fontSize = 12.sp,
+                color = if (value == null) GaugeGrey else androidx.compose.ui.graphics.Color.White, modifier = Modifier.weight(1f))
+            if (value != null) TextButton({ Sim.update { st -> st.copy(overrides = st.overrides - m.id) } }) { Text("auto") }
+        }
+        Slider(v.toFloat().coerceIn(m.min.toFloat(), m.max.toFloat()), { x -> Sim.update { st -> st.copy(overrides = st.overrides + (m.id to x.toDouble())) } },
+            valueRange = m.min.toFloat()..m.max.toFloat())
     }
 }

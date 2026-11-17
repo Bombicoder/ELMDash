@@ -20,7 +20,9 @@ data class SimState(
     val coolant: Double = 88.0, val oil: Double = 94.0, val volt: Double = 13.8, val lambdaOffset: Double = 0.0,
     val mil: Boolean = false, val dtcs: List<String> = emptyList(),
     val adapterAbsent: Boolean = false, val ecuMute: Boolean = false,
-    val oldEcu: Boolean = false            // vieux calculateur : très peu de PID déclarés (comme une voiture de 1997)
+    val oldEcu: Boolean = false,           // vieux calculateur : très peu de PID déclarés (comme une voiture de 1997)
+    val overrides: Map<String, Double> = emptyMap(),   // valeur forcée par un curseur, pour n'importe quelle donnée
+    val timeScale: Double = 3.0            // accélération des scénarios « démarrage à froid » et « surchauffe »
 )
 
 object Sim {
@@ -71,7 +73,7 @@ class ElmEmulator {
         val s = Sim.state.value
         val c = raw.trim().uppercase().replace(" ", "")
         if (c.startsWith("AT")) return when (c) {
-            "ATZ" -> "ELM327 v1.5"; "ATRV" -> String.format(Locale.US, "%.1fV", s.volt)
+            "ATZ" -> "ELM327 v1.5"; "ATRV" -> String.format(Locale.US, "%.1fV", s.overrides["BATT"] ?: s.volt)
             "ATDP" -> "AUTO, ISO 9141-2"; else -> "OK"
         }
         if (s.ecuMute) return "NO DATA"
@@ -91,7 +93,7 @@ class ElmEmulator {
         if (c == "04") { Sim.update { it.copy(mil = false, dtcs = emptyList()) }; return "44" }
 
         val t = System.nanoTime() / 1e9
-        val v = simVehicle(s, Sim.elapsed(), t)
+        val v = simVehicle(s, Sim.elapsed() * s.timeScale, t)
         val mp = min(100.0, 30 + 75 * v.load)
         val maf = 1.6 * v.rpm / 120 * 1.184 * 0.9 * mp / 101.3
         val lamCmd = (if (v.load > 0.85) 0.86 else 1.0) + s.lambdaOffset
@@ -105,7 +107,7 @@ class ElmEmulator {
         val p = sup[c.substring(2).toIntOrNull(16) ?: -1]?.takeIf { it.cmd == c }
         val value: Double; val bytes: Int; val scale: Double; val offset: Double
         if (p != null) {
-            value = known[p.id] ?: (p.min + (p.max - p.min) * (0.5 + 0.3 * sin(t * 0.3 + p.id.length)))
+            value = s.overrides[p.id] ?: known[p.id] ?: (p.min + (p.max - p.min) * (0.5 + 0.3 * sin(t * 0.3 + p.id.length)))
             bytes = p.bytes; scale = p.scale; offset = p.offset
         } else if (c == "221234") {
             val r = 0.05
