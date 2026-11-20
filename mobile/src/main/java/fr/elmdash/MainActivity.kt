@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import fr.elmdash.core.*
+import fr.elmdash.core.Text
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -69,7 +70,7 @@ class MainActivity : ComponentActivity() {
     private fun startObd() {
         EngineHost.ensureStarted(this)
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            Telemetry.status.value = "Autorise « Appareils à proximité » (Paramètres Android › Applications › ELMDash) pour utiliser le boîtier"
+            Telemetry.status.value = "Autorisation « Appareils à proximité » requise pour utiliser le boîtier (Paramètres Android › Applications › ELMDash)"
             return
         }
         runCatching { ContextCompat.startForegroundService(this, Intent(this, ObdService::class.java)) }
@@ -81,8 +82,8 @@ class MainActivity : ComponentActivity() {
 fun CrashScreen(trace: String, onContinue: () -> Unit) {
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("L'appli s'est arrêtée la dernière fois", fontSize = 20.sp)
-        Text("Copie ce rapport et envoie-le pour qu'on corrige le problème.", fontSize = 13.sp)
+        Text("L'application s'est arrêtée de façon inattendue", fontSize = 20.sp)
+        Text("Copier ce rapport pour le transmettre au développeur.", fontSize = 13.sp)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { Text(trace, fontSize = 10.sp, color = GaugeAmber) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button({ (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("crash", trace)) }) { Text("Copier") }
@@ -129,7 +130,7 @@ enum class Screen { DASH, SETTINGS, SIM, DTC }
 @Composable
 fun DashApp(store: ConfigStore, askPermissions: () -> Unit) {
     val ctx = LocalContext.current
-    val app = remember { AppState(store) }
+    val app = remember { AppState(store).also { I18n.set(it.settings.lang) } }
     var screen by remember { mutableStateOf(Screen.DASH) }
     // Envoi à la montre 0,7 s après la dernière modification
     LaunchedEffect(app.pages, app.settings, app.custom, app.warm) { delay(700); runCatching { WearSync.pushConfig(ctx, store) } }
@@ -169,6 +170,7 @@ fun Dashboard(app: AppState, onSettings: () -> Unit, onSim: () -> Unit, onDtc: (
             Text(status, fontSize = 12.sp, maxLines = 2, modifier = Modifier.weight(1f).clickable { if (link == Link.OFF) askPermissions() })
             MilBadge(mil, dtcCount) { onDtc() }
             if (app.settings.simulate) Text(" SIM ", fontSize = 11.sp, color = GaugeViolet, modifier = Modifier.clickable { onSim() })
+            LangPicker(I18n.lang) { l -> I18n.set(l.code); app.updateSettings(app.settings.copy(lang = l.code)) }
             Text("⟲", fontSize = 24.sp, modifier = Modifier.clickable { Telemetry.tripReset.value = true }.padding(horizontal = 8.dp))
             Text("⚙", fontSize = 24.sp, modifier = Modifier.clickable { onSettings() }.padding(horizontal = 8.dp))
         }

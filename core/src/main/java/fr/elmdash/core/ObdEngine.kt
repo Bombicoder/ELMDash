@@ -37,16 +37,21 @@ class ObdEngine(
 
     suspend fun run() = coroutineScope {
         val link = ObdLink(); val fuel = FuelEngine(); val vals = HashMap<String, Double>()
+        val calSp = ctx.getSharedPreferences("elmdash_cal", Context.MODE_PRIVATE)    // l'étalonnage survit à un redémarrage
+        Telemetry.calActive.value = calSp.getBoolean("active", false)
+        Telemetry.calKm.value = calSp.getFloat("km", 0f).toDouble(); Telemetry.calL.value = calSp.getFloat("l", 0f).toDouble()
+        var lastSave = 0L
+        fun saveCal() { calSp.edit().putBoolean("active", Telemetry.calActive.value).putFloat("km", Telemetry.calKm.value.toFloat()).putFloat("l", Telemetry.calL.value.toFloat()).apply() }
         try {
             while (isActive) {
                 val st = settings()
-                if (paused()) { link.close(); set(Link.OFF, "Boîtier utilisé par l'autre appareil"); delay(1500); continue }
+                if (paused()) { link.close(); set(Link.OFF, "Boîtier utilisé par un autre appareil"); delay(1500); continue }
                 link.emu = if (st.simulate) ElmEmulator() else null
                 if (st.simulate && Sim.state.value.adapterAbsent) { set(Link.OFF, "Boîtier absent (simulation)"); delay(1000); continue }
                 val dev = if (st.simulate) null else findBonded(ctx, mac())
-                if (dev == null && !st.simulate) { set(Link.OFF, "Aucun boîtier : choisis-le dans Réglages"); delay(3000); continue }
+                if (dev == null && !st.simulate) { set(Link.OFF, "Aucun boîtier sélectionné (Réglages › Boîtier)"); delay(3000); continue }
                 set(Link.CONNECTING, "Connexion au boîtier…")
-                if (!(st.simulate || link.open(dev!!))) { set(Link.OFF, "Boîtier injoignable (branché ? à portée ?)"); delay(3000); continue }
+                if (!(st.simulate || link.open(dev!!))) { set(Link.OFF, "Boîtier injoignable (branché et à portée ?)"); delay(3000); continue }
                 set(Link.ADAPTER_OK, "Boîtier connecté · recherche du calculateur…")
                 if (!link.init(st.proto)) { link.close(); set(Link.ADAPTER_OK, "Boîtier OK mais calculateur muet (contact mis ?)"); delay(3000); continue }
                 Telemetry.adapterInfo.value = link.info
@@ -60,6 +65,10 @@ class ObdEngine(
                     while (isActive && !paused() && !Telemetry.reconnect.value) {
                         val s = settings(); val pm = pids()
                         if (Telemetry.tripReset.value) { fuel.resetTrip(); Telemetry.tripReset.value = false }
+                        Telemetry.calCommand.value?.let { cmd ->
+                            if (cmd == "START") { Telemetry.calActive.value = true; Telemetry.calKm.value = 0.0; Telemetry.calL.value = 0.0 } else Telemetry.calActive.value = false
+                            saveCal(); Telemetry.calCommand.value = null
+                        }
                         if (Telemetry.scanRequest.value) { scan(link); Telemetry.scanRequest.value = false }
                         Telemetry.dtcRequest.value?.let { handleDtc(link, it) }
                         Telemetry.rawIn.value?.let { cmd ->
@@ -81,7 +90,14 @@ class ObdEngine(
                             if (v != null) { vals[id] = v; got++ } else vals.remove(id)
                         }
                         val t = System.nanoTime(); val dt = (t - last) / 1e9; last = t
-                        vals.putAll(fuel.compute(vals, s, dt))
+                        val fo = fuel.compute(vals, s, dt)
+                        vals.putAll(fo.filterKeys { it != "FUEL_RAW_LH" })
+                        val raw = fo["FUEL_RAW_LH"]
+                        if (Telemetry.calActive.value && raw != null) {
+                            val d2 = dt.coerceIn(0.0, 2.0)
+                            Telemetry.calL.value += raw * d2 / 3600.0; Telemetry.calKm.value += (vals["SPEED"] ?: 0.0) * d2 / 3600.0
+                            if (now - lastSave > 5000) { lastSave = now; saveCal() }
+                        }
                         if (st.simulate) Sim.state.value.overrides.forEach { (k, ov) -> if (Pids.virtual.any { it.id == k }) vals[k] = ov }
                         if (got > 0) { if (silent > 3 || Telemetry.link.value != okLink) set(okLink, okMsg); silent = 0 }
                         else if (want.isNotEmpty() && ++silent == 4) set(Link.ADAPTER_OK, "Boîtier OK · calculateur muet (contact ?)")

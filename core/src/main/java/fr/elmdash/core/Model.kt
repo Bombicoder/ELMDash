@@ -17,9 +17,9 @@ enum class Kind { PLAIN, TEMP, CENTER }
 
 /** Protocole de dialogue avec le calculateur. */
 enum class ProtoMode(val label: String, val desc: String) {
-    CLASSIC("OBD-II ancien (ISO 9141 / J1850)", "Défaut. Ford Probe 1997 et véhicules 1996-2003 : ISO 9141-2, KWP, J1850, puis CAN."),
-    ISO("K-line seul (ISO 9141 / KWP)", "Comme le « ISO » de FORScan : ISO 9141-2, puis KWP lent et rapide. Connexion la plus rapide sur une Probe."),
-    STANDARD("OBD-II standard récent", "Détection automatique puis CAN ISO 15765-4. Pour les véhicules plus récents."),
+    CLASSIC("OBD-II ancien (ISO 9141 / J1850)", "Défaut. Véhicules 1996-2003, par ex. Ford Probe 1997 : ISO 9141-2, KWP, J1850, puis CAN."),
+    ISO("K-line seul (ISO 9141 / KWP)", "ISO 9141-2, puis KWP lent et rapide. Connexion la plus rapide sur les véhicules K-line."),
+    STANDARD("OBD-II standard récent", "Détection automatique puis CAN ISO 15765-4. Pour les véhicules récents."),
     FORSCAN("FORScan (CAN + en-têtes ECU)", "CAN 500 kbps, adressage physique 7E0, requêtes Mode 22 (PID perso).")
 }
 
@@ -61,7 +61,10 @@ data class Settings(
     val watchDirect: Boolean = false,    // true = le téléphone ne touche pas au boîtier (la montre s'y connecte seule)
     val watchScale: Double = 1.0,        // taille du cadran sur la montre (1.0 = 100 %)
     val proto: ProtoMode = ProtoMode.CLASSIC,
-    val watchDtc: Boolean = true         // page « codes défaut » sur la montre
+    val watchDtc: Boolean = true,        // page « codes défaut » sur la montre
+    val lang: String = "",              // "" = automatique (langue du système si disponible, sinon anglais)
+    val injName: String = "",           // injecteur choisi dans le catalogue
+    val fuelCal: Double = 1.0            // facteur d'étalonnage carburant (plein à plein)
 )
 data class Config(val pages: List<PageCfg>, val custom: List<PidDef>, val warm: WarmCfg, val settings: Settings)
 
@@ -77,55 +80,55 @@ object Pids {
     val standard = listOf(
         s("RPM", "Régime", "tr/min", "010C", 2, 0.25, 0.0, 0.0, 7000.0, 0, Style.DIAL, "Moteur", 6200.0),
         s("SPEED", "Vitesse", "km/h", "010D", 1, 1.0, 0.0, 0.0, 240.0, 0, Style.NUMERIC, "Moteur"),
-        s("LOAD", "Charge calculée", "%", "0104", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Moteur"),
+        s("LOAD", "Charge moteur", "%", "0104", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Moteur"),
         s("ABSLOAD", "Charge absolue", "%", "0143", 2, 100.0 / 255, 0.0, 0.0, 200.0, 0, Style.BAR, "Moteur"),
         s("THROTTLE", "Papillon", "%", "0111", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Moteur"),
-        s("PEDAL", "Pédale d'accélérateur", "%", "0149", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Moteur"),
-        s("TIMING", "Avance à l'allumage", "°", "010E", 1, 0.5, -64.0, -20.0, 60.0, 0, Style.BAR, "Moteur", null, Kind.CENTER),
-        s("RUNTIME", "Temps depuis le démarrage", "s", "011F", 2, 1.0, 0.0, 0.0, 3600.0, 0, Style.NUMERIC, "Moteur"),
+        s("PEDAL", "Pédale", "%", "0149", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Moteur"),
+        s("TIMING", "Avance allumage", "°", "010E", 1, 0.5, -64.0, -20.0, 60.0, 0, Style.BAR, "Moteur", null, Kind.CENTER),
+        s("RUNTIME", "Temps moteur", "s", "011F", 2, 1.0, 0.0, 0.0, 3600.0, 0, Style.NUMERIC, "Moteur"),
         s("COOLANT", "Eau", "°C", "0105", 1, 1.0, -40.0, 40.0, 130.0, 0, Style.BAR, "Températures", 105.0, Kind.TEMP),
         s("OIL", "Huile", "°C", "015C", 1, 1.0, -40.0, 40.0, 150.0, 0, Style.BAR, "Températures", 130.0, Kind.TEMP),
-        s("IAT", "Air d'admission", "°C", "010F", 1, 1.0, -40.0, -20.0, 100.0, 0, Style.BAR, "Températures", 70.0, Kind.TEMP),
+        s("IAT", "Air admission", "°C", "010F", 1, 1.0, -40.0, -20.0, 100.0, 0, Style.BAR, "Températures", 70.0, Kind.TEMP),
         s("AMBIENT", "Air extérieur", "°C", "0146", 1, 1.0, -40.0, -20.0, 50.0, 0, Style.BAR, "Températures", null, Kind.TEMP),
-        s("CAT1", "Catalyseur B1S1", "°C", "013C", 2, 0.1, -40.0, 0.0, 1000.0, 0, Style.BAR, "Températures", 900.0, Kind.TEMP),
-        s("MAP", "Pression collecteur", "kPa", "010B", 1, 1.0, 0.0, 0.0, 250.0, 0, Style.BAR, "Air et pression"),
-        s("BARO", "Pression atmosphérique", "kPa", "0133", 1, 1.0, 0.0, 80.0, 110.0, 0, Style.NUMERIC, "Air et pression"),
+        s("CAT1", "Catalyseur", "°C", "013C", 2, 0.1, -40.0, 0.0, 1000.0, 0, Style.BAR, "Températures", 900.0, Kind.TEMP),
+        s("MAP", "Pression admission", "kPa", "010B", 1, 1.0, 0.0, 0.0, 250.0, 0, Style.BAR, "Air et pression"),
+        s("BARO", "Pression atmo.", "kPa", "0133", 1, 1.0, 0.0, 80.0, 110.0, 0, Style.NUMERIC, "Air et pression"),
         s("MAF", "Débit d'air", "g/s", "0110", 2, 0.01, 0.0, 0.0, 300.0, 1, Style.BAR, "Air et pression"),
         s("FUELP", "Pression carburant", "kPa", "010A", 1, 3.0, 0.0, 0.0, 765.0, 0, Style.BAR, "Carburant"),
-        s("FRP", "Pression rampe (injection directe)", "kPa", "0123", 2, 10.0, 0.0, 0.0, 25000.0, 0, Style.BAR, "Carburant"),
+        s("FRP", "Pression rampe", "kPa", "0123", 2, 10.0, 0.0, 0.0, 25000.0, 0, Style.BAR, "Carburant"),
         s("FUELLEVEL", "Niveau carburant", "%", "012F", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Carburant"),
-        s("FUELRATE_ECU", "Débit carburant (ECU)", "L/h", "015E", 2, 0.05, 0.0, 0.0, 40.0, 1, Style.NUMERIC, "Carburant"),
-        s("ETHANOL", "Éthanol (capteur ECU)", "%", "0152", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Carburant"),
-        s("LAMBDA", "Lambda piloté (commandé)", "λ", "0144", 2, 2.0 / 65536, 0.0, 0.7, 1.3, 2, Style.CURVE, "Mélange", 0.15, Kind.CENTER),
-        s("LAMBDA_B1", "Lambda mesuré (large bande)", "λ", "0124", 2, 2.0 / 65536, 0.0, 0.7, 1.3, 2, Style.CURVE, "Mélange", 0.15, Kind.CENTER),
-        s("O2_B1S1", "Sonde O2 amont (tension)", "V", "0114", 1, 0.005, 0.0, 0.0, 1.0, 2, Style.CURVE, "Mélange", null, Kind.CENTER),
-        s("O2_B1S2", "Sonde O2 aval (tension)", "V", "0115", 1, 0.005, 0.0, 0.0, 1.0, 2, Style.CURVE, "Mélange", null, Kind.CENTER),
-        s("STFT1", "Correction court terme", "%", "0106", 1, 100.0 / 128, -100.0, -25.0, 25.0, 1, Style.BAR, "Mélange", 15.0, Kind.CENTER),
-        s("LTFT1", "Correction long terme", "%", "0107", 1, 100.0 / 128, -100.0, -25.0, 25.0, 1, Style.BAR, "Mélange", 15.0, Kind.CENTER),
-        s("EGR", "EGR commandée", "%", "012C", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Émissions"),
-        s("EVAP", "Purge canister", "%", "012E", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Émissions"),
-        s("VOLT", "Tension calculateur", "V", "0142", 2, 0.001, 0.0, 8.0, 16.0, 1, Style.NUMERIC, "Électrique"),
-        PidDef("BATT", "Tension batterie (mesurée par le boîtier)", "V", "", "ATRV", 0, 1.0, 0.0, false, 10.0, 15.0, 1, Style.NUMERIC, "Électrique", null, Kind.PLAIN),
-        s("WARMUPS", "Cycles de chauffe", "", "0130", 1, 1.0, 0.0, 0.0, 255.0, 0, Style.NUMERIC, "Compteurs"),
-        s("DIST_CLR", "Distance depuis effacement défauts", "km", "0131", 2, 1.0, 0.0, 0.0, 65535.0, 0, Style.NUMERIC, "Compteurs"),
-        s("DIST_MIL", "Distance voyant allumé", "km", "0121", 2, 1.0, 0.0, 0.0, 65535.0, 0, Style.NUMERIC, "Compteurs")
+        s("FUELRATE_ECU", "Débit carburant", "L/h", "015E", 2, 0.05, 0.0, 0.0, 40.0, 1, Style.NUMERIC, "Carburant"),
+        s("ETHANOL", "Éthanol", "%", "0152", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Carburant"),
+        s("LAMBDA", "Lambda piloté", "λ", "0144", 2, 2.0 / 65536, 0.0, 0.7, 1.3, 2, Style.CURVE, "Mélange", 0.15, Kind.CENTER),
+        s("LAMBDA_B1", "Lambda mesuré", "λ", "0124", 2, 2.0 / 65536, 0.0, 0.7, 1.3, 2, Style.CURVE, "Mélange", 0.15, Kind.CENTER),
+        s("O2_B1S1", "Sonde O2 amont", "V", "0114", 1, 0.005, 0.0, 0.0, 1.0, 2, Style.CURVE, "Mélange", null, Kind.CENTER),
+        s("O2_B1S2", "Sonde O2 aval", "V", "0115", 1, 0.005, 0.0, 0.0, 1.0, 2, Style.CURVE, "Mélange", null, Kind.CENTER),
+        s("STFT1", "Correction CT", "%", "0106", 1, 100.0 / 128, -100.0, -25.0, 25.0, 1, Style.BAR, "Mélange", 15.0, Kind.CENTER),
+        s("LTFT1", "Correction LT", "%", "0107", 1, 100.0 / 128, -100.0, -25.0, 25.0, 1, Style.BAR, "Mélange", 15.0, Kind.CENTER),
+        s("EGR", "EGR", "%", "012C", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Émissions"),
+        s("EVAP", "Purge EVAP", "%", "012E", 1, 100.0 / 255, 0.0, 0.0, 100.0, 0, Style.BAR, "Émissions"),
+        s("VOLT", "Tension ECU", "V", "0142", 2, 0.001, 0.0, 8.0, 16.0, 1, Style.NUMERIC, "Électrique"),
+        PidDef("BATT", "Tension", "V", "", "ATRV", 0, 1.0, 0.0, false, 10.0, 15.0, 1, Style.NUMERIC, "Électrique", null, Kind.PLAIN),
+        s("WARMUPS", "Cycles chauffe", "", "0130", 1, 1.0, 0.0, 0.0, 255.0, 0, Style.NUMERIC, "Compteurs"),
+        s("DIST_CLR", "Km depuis effacement", "km", "0131", 2, 1.0, 0.0, 0.0, 65535.0, 0, Style.NUMERIC, "Compteurs"),
+        s("DIST_MIL", "Km voyant allumé", "km", "0121", 2, 1.0, 0.0, 0.0, 65535.0, 0, Style.NUMERIC, "Compteurs")
     )
 
     /** Valeurs calculées par l'appli (consommation, trajet). */
     val virtual = listOf(
-        Meta("FUEL_L100", "Conso instantanée", "L/100", 0.0, 30.0, 1, Style.DIAL, "Consommation", 20.0, Kind.PLAIN),
-        Meta("FUEL_LH", "Conso instantanée (débit)", "L/h", 0.0, 40.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
-        Meta("FUEL_AVG", "Conso moyenne du trajet", "L/100", 0.0, 30.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
-        Meta("FUEL_TRIPL", "Carburant consommé (trajet)", "L", 0.0, 60.0, 2, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
-        Meta("TRIP_KM", "Distance du trajet", "km", 0.0, 500.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
-        Meta("TRIP_MIN", "Durée du trajet", "min", 0.0, 600.0, 0, Style.NUMERIC, "Consommation", null, Kind.PLAIN)
+        Meta("FUEL_L100", "Conso", "L/100", 0.0, 30.0, 1, Style.DIAL, "Consommation", 20.0, Kind.PLAIN),
+        Meta("FUEL_LH", "Conso (débit)", "L/h", 0.0, 40.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
+        Meta("FUEL_AVG", "Conso moyenne", "L/100", 0.0, 30.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
+        Meta("FUEL_TRIPL", "Carburant trajet", "L", 0.0, 60.0, 2, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
+        Meta("TRIP_KM", "Distance trajet", "km", 0.0, 500.0, 1, Style.NUMERIC, "Consommation", null, Kind.PLAIN),
+        Meta("TRIP_MIN", "Durée trajet", "min", 0.0, 600.0, 0, Style.NUMERIC, "Consommation", null, Kind.PLAIN)
     )
 
     val combos = listOf(
         Combo("Lambda piloté + mesuré", "LAMBDA", listOf("LAMBDA_B1"), Style.CURVE),
-        Combo("Conso instantanée + moyenne du trajet", "FUEL_L100", listOf("FUEL_AVG"), Style.DIAL),
+        Combo("Conso instantanée + moyenne", "FUEL_L100", listOf("FUEL_AVG"), Style.DIAL),
         Combo("Sonde O2 amont + aval", "O2_B1S1", listOf("O2_B1S2"), Style.CURVE),
-        Combo("Corrections court + long terme", "STFT1", listOf("LTFT1"), Style.CURVE),
+        Combo("Corrections CT + LT", "STFT1", listOf("LTFT1"), Style.CURVE),
         Combo("Eau + huile", "COOLANT", listOf("OIL"), Style.CURVE)
     )
 
@@ -164,6 +167,11 @@ object Telemetry {
     val dtcList = MutableStateFlow<List<String>>(emptyList())
     val dtcRequest = MutableStateFlow<String?>(null)               // "READ" ou "CLEAR"
     val dtcBusy = MutableStateFlow(false)
+    // étalonnage carburant
+    val calActive = MutableStateFlow(false)
+    val calKm = MutableStateFlow(0.0)
+    val calL = MutableStateFlow(0.0)                                // litres estimés (brut, sans correction)
+    val calCommand = MutableStateFlow<String?>(null)                // "START" ou "STOP"
 }
 
 object Defaults {
@@ -224,13 +232,14 @@ object Codec {
     fun settingsToJson(s: Settings) = JSONObject().put("mac", s.deviceMac).put("eth", s.ethanolPct).put("box", s.boxEnabled)
         .put("ref", s.ecuRefEthanol).put("mode", s.fuelMode.name).put("cyl", s.cylinders).put("cc", s.injectorCcMin)
         .put("dead", s.deadTimeMs).put("sim", s.simulate).put("wd", s.watchDirect).put("ws", s.watchScale)
-        .put("proto", s.proto.name).put("wdtc", s.watchDtc)
+        .put("proto", s.proto.name).put("wdtc", s.watchDtc).put("lang", s.lang).put("inj", s.injName).put("cal", s.fuelCal)
 
     fun settingsFromJson(o: JSONObject) = Settings(o.optString("mac"), o.optDouble("eth", 85.0), o.optBoolean("box", true),
         o.optDouble("ref", 5.0), runCatching { FuelMode.valueOf(o.optString("mode", "MAF")) }.getOrDefault(FuelMode.MAF),
         o.optInt("cyl", 4), o.optDouble("cc", 200.0), o.optDouble("dead", 0.8), o.optBoolean("sim", false),
         o.optBoolean("wd", false), o.optDouble("ws", 1.0),
-        runCatching { ProtoMode.valueOf(o.optString("proto", "CLASSIC")) }.getOrDefault(ProtoMode.CLASSIC), o.optBoolean("wdtc", true))
+        runCatching { ProtoMode.valueOf(o.optString("proto", "CLASSIC")) }.getOrDefault(ProtoMode.CLASSIC), o.optBoolean("wdtc", true),
+        o.optString("lang"), o.optString("inj"), o.optDouble("cal", 1.0))
 
     fun warmToJson(w: WarmCfg) = JSONObject().put("on", w.enabled).put("pid", w.pid).put("ready", w.ready).put("hot", w.hot)
     fun warmFromJson(o: JSONObject) = WarmCfg(o.optBoolean("on", true), o.optString("pid", "COOLANT"), o.optDouble("ready", 85.0), o.optDouble("hot", 108.0))

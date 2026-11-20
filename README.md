@@ -29,3 +29,12 @@ Tableau de bord OBD-II pour téléphone Android **et** montre Wear OS, avec boî
 - Montée en température : case à cocher sur chaque cadran (touche le cadran). Jauge intérieure bleu → rouge, clignote vert quand c'est prêt, disparaît ; clignote rouge en surchauffe.
 - Manomètre : l'arc vire à l'orange puis au rouge en approchant de la limite (champ « Limite (rouge) » du cadran, ex. 6200 tr/min pour le régime).
 - Montre OLED : fonds noirs purs, plus de rectangles de fond.
+
+## Langues
+Anglais, français, espagnol, allemand. Le drapeau en haut du tableau de bord (et dans Réglages, et sur la page réglages de la montre) change la langue.
+Par défaut : la langue du système si elle est disponible, sinon l'anglais. Pour ajouter une langue : ajouter une valeur dans `Lang` (I18n.kt) et une colonne dans `I18nData.kt`.
+
+## Consommation
+- Méthodes : débit d'air (MAF + lambda) ou injecteurs (catalogue + PID d'activité des injecteurs).
+- Étalonnage plein à plein : Réglages › Carburant › Étalonnage. Le facteur est conservé après redémarrage et appliqué à toutes les valeurs de consommation (téléphone et montre).
+- Le catalogue d'injecteurs donne des débits indicatifs ; l'étalonnage corrige l'écart restant.

@@ -26,7 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import fr.elmdash.core.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -57,7 +57,7 @@ private fun PickRow(m: Meta, ok: Boolean, showTick: Boolean, onClick: () -> Unit
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(m.label, color = if (ok) Color.White else GaugeGrey, fontSize = 14.sp)
-            Text("${m.unit.ifEmpty { "—" }} · ${m.style.fr()}", color = GaugeGrey, fontSize = 11.sp)
+            Text("${m.unit.ifEmpty { "—" }} · ${tr(m.style.fr())}", color = GaugeGrey, fontSize = 11.sp)
         }
         if (ok && showTick) Text("✓", color = GaugeGreen, fontSize = 16.sp)
     }
@@ -81,14 +81,14 @@ fun DataPickerDialog(custom: List<PidDef>, unitFilter: String?, exclude: Set<Str
             Column(Modifier.padding(14.dp)) {
                 Text("Choisir une donnée", fontSize = 18.sp, color = Color.White)
                 OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(vertical = 8.dp), singleLine = true, label = { Text("Rechercher") })
-                if (sup.isNotEmpty()) Text("✓ = lu par ton calculateur (scan automatique).", fontSize = 11.sp, color = GaugeGrey)
+                if (sup.isNotEmpty()) Text("✓ = lu par le calculateur (scan automatique).", fontSize = 11.sp, color = GaugeGrey)
                 LazyColumn(Modifier.weight(1f)) {
                     ok.groupBy { it.group }.forEach { (g, list) ->
                         item { Text(g, color = GaugeCyan, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)) }
                         items(list) { m -> PickRow(m, true, sup.isNotEmpty()) { onPick(m) } }
                     }
                     if (nok.isNotEmpty()) {
-                        item { Text("Non déclarées par ton calculateur", color = GaugeAmber, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp, bottom = 2.dp)) }
+                        item { Text("Non déclarées par le calculateur", color = GaugeAmber, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp, bottom = 2.dp)) }
                         items(nok) { m -> PickRow(m, false, false) { onPick(m) } }
                     }
                 }
@@ -141,7 +141,7 @@ fun GaugeEditorDialog(
                         Text("Type d'affichage", color = GaugeCyan, fontSize = 13.sp)
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Style.values().forEach { s ->
-                                FilterChip(selected = (c.style ?: m.style) == s, onClick = { cfg = c.copy(style = s) }, label = { Text("${s.icon()} ${s.fr()}") })
+                                FilterChip(selected = (c.style ?: m.style) == s, onClick = { cfg = c.copy(style = s) }, label = { Text("${s.icon()} ${tr(s.fr())}") })
                             }
                         }
 
@@ -151,7 +151,7 @@ fun GaugeEditorDialog(
                         }
                         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             c.extra.forEach { id ->
-                                FilterChip(selected = true, onClick = { cfg = c.copy(extra = c.extra - id) }, label = { Text(Pids.meta(id, custom).label.take(24) + "  ✕") })
+                                FilterChip(selected = true, onClick = { cfg = c.copy(extra = c.extra - id) }, label = { Text(tr(Pids.meta(id, custom).label).take(24) + "  ✕") })
                             }
                             if (c.extra.size < 3) OutlinedButton({ picker = 2 }) { Text("＋ Ajouter une lecture") }
                         }
@@ -166,7 +166,7 @@ fun GaugeEditorDialog(
                             }
                         }
                         TextButton({ cfg = c.copy(min = m.min, max = m.max, warn = m.warn); resetN++ }) { Text("Échelle automatique") }
-                        if ((c.style ?: m.style) == Style.DIAL) Text("Manomètre « shift light » : de la moitié de la plage jusqu'à la limite, tout le cadran vire à l'orange puis au rouge, et clignote en rouge à la limite (rupteur). Règle la limite ici (ex. 6200 tr/min).", fontSize = 11.sp, color = GaugeGrey)
+                        if ((c.style ?: m.style) == Style.DIAL) Text("Manomètre « shift light » : de la moitié de la plage jusqu'à la limite, tout le cadran vire à l'orange puis au rouge, et clignote en rouge à la limite (rupteur). Définir la limite ici (ex. 6200 tr/min).", fontSize = 11.sp, color = GaugeGrey)
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Switch(c.warm, { on -> cfg = cfg?.copy(warm = on) }); Spacer(Modifier.width(8.dp))

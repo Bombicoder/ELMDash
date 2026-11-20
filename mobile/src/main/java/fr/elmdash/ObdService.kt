@@ -19,7 +19,7 @@ class ObdService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("obd", "OBD", NotificationManager.IMPORTANCE_LOW))
         val n: Notification = NotificationCompat.Builder(this, "obd").setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle("ElmDash").setContentText("Lecture OBD en cours").build()
+            .setContentTitle("ElmDash").setContentText(tr("Lecture OBD en cours")).build()
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) else startForeground(1, n)
         } catch (e: Exception) {

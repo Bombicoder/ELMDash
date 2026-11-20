@@ -5,9 +5,9 @@ package fr.elmdash.core
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -28,11 +28,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,9 +49,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -71,17 +70,8 @@ val GaugeGreen = Color(0xFF4ADE80)
 val GaugeGrey = Color(0xFF8AA0B2)
 val SeriesColors = listOf(GaugeCyan, GaugeAmber, GaugeViolet, GaugeGreen)
 
-/** true sur la montre (écran OLED) : fonds noirs purs, aucun rectangle de fond. */
+/** true sur la montre (écran OLED rond) : fonds noirs purs, très peu de texte, mise en page centrée. */
 val LocalOled = compositionLocalOf { false }
-
-/** 0 → 1 quand la valeur approche de la limite (départ à 60 % de la plage jusqu'à la limite). */
-private fun rampQ(v: Double?, min: Double, warn: Double?): Float {
-    if (v == null || warn == null || warn <= min) return 0f
-    val rs = min + (warn - min) * 0.6
-    return ((v - rs) / (warn - rs)).toFloat().coerceIn(0f, 1f)
-}
-private fun rampColor(base: Color, q: Float): Color =
-    if (q <= 0f) base else if (q < 0.5f) lerp(base, GaugeAmber, q * 2f) else lerp(GaugeAmber, GaugeRed, (q - 0.5f) * 2f)
 
 /** Une lecture affichée sur un cadran (un cadran peut en porter jusqu'à 4). */
 data class Reading(val label: String, val unit: String, val value: Double?, val decimals: Int, val color: Color) {
@@ -89,6 +79,14 @@ data class Reading(val label: String, val unit: String, val value: Double?, val 
 }
 
 private fun fracOf(v: Double?, min: Double, span: Double) = (((v ?: min) - min) / span).toFloat().coerceIn(0f, 1f)
+
+private fun rampQ(v: Double?, min: Double, warn: Double?): Float {
+    if (v == null || warn == null || warn <= min) return 0f
+    val rs = min + (warn - min) * 0.6
+    return ((v - rs) / (warn - rs)).toFloat().coerceIn(0f, 1f)
+}
+private fun rampColor(base: Color, q: Float): Color =
+    if (q <= 0f) base else if (q < 0.5f) lerp(base, GaugeAmber, q * 2f) else lerp(GaugeAmber, GaugeRed, (q - 0.5f) * 2f)
 
 @Composable
 fun Gauge(style: Style, title: String, reads: List<Reading>, min: Double, max: Double, warn: Double?,
@@ -103,10 +101,9 @@ fun Gauge(style: Style, title: String, reads: List<Reading>, min: Double, max: D
 }
 
 /**
- * Manomètre : arc 240°, graduations, aiguille ; lectures supplémentaires = aiguilles fines de couleur.
- * Effet « shift light » : de la moitié de la plage jusqu'à la limite, TOUT le cadran (arc, graduations, aiguille, chiffres, fond)
+ * Manomètre « shift light » : de la moitié de la plage jusqu'à la limite, TOUT le cadran (arc, graduations, aiguille, chiffres, fond)
  * vire progressivement à l'orange puis au rouge ; à la limite (rupteur) il clignote en rouge.
- * Sur la montre (OLED) : fond noir pur et peu de texte.
+ * Valeur centrée sous le pivot, unité dessous ; sur la montre (OLED) fond noir pur et peu de texte.
  */
 @Composable
 fun DialGauge(title: String, reads: List<Reading>, min: Double, max: Double, warn: Double?, modifier: Modifier = Modifier) {
@@ -119,7 +116,7 @@ fun DialGauge(title: String, reads: List<Reading>, min: Double, max: Double, war
     val extraFr = extras.map { fracOf(it.value, min, span) }
     val warnFrac = warn?.let { ((it - min) / span).toFloat().coerceIn(0f, 1f) }
     val limit = if (warnFrac != null && warnFrac > 0.08f) warnFrac else null
-    val q = if (limit != null) ((frac - limit * 0.5f) / (limit * 0.5f)).coerceIn(0f, 1f) else 0f   // 0 à 50 % de la limite → 1 à la limite
+    val q = if (limit != null) ((frac - limit * 0.5f) / (limit * 0.5f)).coerceIn(0f, 1f) else 0f
     val over = limit != null && frac >= limit
     val blink by rememberInfiniteTransition(label = "shift").animateFloat(0f, 1f, infiniteRepeatable(tween(130), RepeatMode.Reverse), label = "b")
     val flash = if (over) blink else 0f
@@ -187,21 +184,23 @@ fun DialGauge(title: String, reads: List<Reading>, min: Double, max: Double, war
             drawCircle(theme, st * 0.5f, c, style = Stroke(st * 0.12f))
         }
 
-        // Texte : valeur + unité sur UNE ligne, bien sous le pivot ; sur la montre, lectures supplémentaires sans libellé
+        // Valeur : centrée sous le pivot, taille adaptée au nombre de chiffres ; unité dessous (ou dans le libellé s'il y a plusieurs lectures)
+        val txt = prim.text()
+        val base = if (extras.isEmpty()) 0.19f else 0.16f
+        val vSize = minOf(base, 0.66f / (txt.length.coerceAtLeast(2) * 0.6f))
         val valueColor = if (prim.value == null) GaugeGrey else if (over) theme else lerp(Color.White, theme, q)
-        Column(Modifier.align(Alignment.Center).offset(y = w * (if (extras.isEmpty()) 0.19f else 0.165f)), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(if (prim.value == null) "–" else prim.text(), color = valueColor,
-                    fontSize = sp(if (prim.value == null) 0.1f else if (extras.isEmpty()) 0.15f else 0.115f), fontWeight = FontWeight.Bold, maxLines = 1)
-                if (prim.value != null) Text(" " + prim.unit, color = GaugeGrey, fontSize = sp(0.05f), maxLines = 1)
-            }
-            extras.forEach { e ->
-                Text(if (oled) "● ${e.text()}" else "● ${e.text()} ${e.label.take(11)}", color = e.color, fontSize = sp(if (oled) 0.07f else 0.05f), maxLines = 1)
+        Column(Modifier.align(Alignment.Center).offset(y = w * (if (extras.isEmpty()) 0.165f else 0.15f)), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(txt, color = valueColor, fontSize = sp(vSize), fontWeight = FontWeight.Bold, maxLines = 1)
+            if (extras.isEmpty()) {
+                if (prim.value != null && prim.unit.isNotEmpty()) Text(prim.unit, color = GaugeGrey, fontSize = sp(0.052f), maxLines = 1)
+            } else extras.forEach { e ->
+                Text(if (oled) "● ${e.text()}" else "● ${e.text()} ${tr(e.label).take(11)}", color = e.color, fontSize = sp(if (oled) 0.075f else 0.05f), maxLines = 1)
             }
         }
-        if (!(oled && extras.size >= 2)) Text(warm?.text() ?: title, color = warm?.color ?: theme, fontSize = sp(if (warm != null) 0.065f else 0.055f), maxLines = 1,
+        val bottom = if (warm != null) warm.text() else if (extras.isNotEmpty() && prim.unit.isNotEmpty()) tr(title) + " · " + prim.unit else title
+        if (!(oled && extras.size >= 2)) Text(bottom, color = warm?.color ?: theme, fontSize = sp(if (warm != null) 0.065f else 0.055f), maxLines = 1,
             fontWeight = if (warm != null) FontWeight.SemiBold else FontWeight.Normal,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = w * (if (oled) 0.15f else 0.05f)))
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = w * (if (oled) 0.12f else 0.05f)))
     }
 }
 
@@ -209,24 +208,23 @@ fun DialGauge(title: String, reads: List<Reading>, min: Double, max: Double, war
 private fun CardFrame(modifier: Modifier, content: @Composable BoxWithConstraintsScope.() -> Unit) {
     val warm = LocalWarm.current
     val oled = LocalOled.current
-    BoxWithConstraints(modifier.clip(RoundedCornerShape(18.dp))
+    BoxWithConstraints(modifier.clip(RoundedCornerShape(if (oled) 28.dp else 18.dp))
         .then(if (oled) Modifier else Modifier.background(Brush.verticalGradient(listOf(Color(0xFF0C141B), Color(0xFF020407)))))
-        .padding(10.dp)) {
+        .padding(if (oled) 6.dp else 10.dp)) {
         content()
         if (warm != null) Canvas(Modifier.fillMaxSize()) {
-            if (warm.phase == 0) drawLine(warm.color, Offset(0f, 0f), Offset(size.width * maxOf(warm.progress, 0.02f), 0f), 6f, StrokeCap.Round)
-            else drawRoundRect(warm.color.copy(alpha = warm.pulse), style = Stroke(6f), cornerRadius = CornerRadius(30f))
+            if (warm.phase == 0) drawLine(warm.color, Offset(size.width * 0.15f, 0f), Offset(size.width * (0.15f + 0.7f * maxOf(warm.progress, 0.02f)), 0f), 6f, StrokeCap.Round)
+            else drawRoundRect(warm.color.copy(alpha = warm.pulse), style = Stroke(6f), cornerRadius = CornerRadius(40f))
         }
     }
 }
 
+/** Titre centré (remplacé par l'état de chauffe quand elle est active). */
 @Composable
-private fun TitleRow(title: String, unit: String, small: TextUnit) {
+private fun TitleRow(title: String, small: TextUnit) {
     val warm = LocalWarm.current
-    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-        Text(warm?.text() ?: title, color = warm?.color ?: GaugeCyan, fontSize = small, maxLines = 1, modifier = Modifier.weight(1f))
-        Text(unit, color = GaugeGrey, fontSize = small)
-    }
+    Text(warm?.text() ?: title, color = warm?.color ?: GaugeCyan, fontSize = small, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -245,29 +243,27 @@ private fun rememberHistory(reads: List<Reading>): List<MutableList<Float>> {
     return hist
 }
 
-/** Courbe : historique des ~60 dernières secondes, toutes les lectures superposées. */
+/** Courbe (60 dernières secondes) : titre, GROSSE valeur centrée, lectures supplémentaires, puis la courbe sur toute la largeur. */
 @Composable
 private fun CurveGauge(title: String, reads: List<Reading>, min: Double, max: Double, warn: Double?, modifier: Modifier) {
-    val oled = LocalOled.current
     val hist = rememberHistory(reads)
     val span = (max - min).coerceAtLeast(1e-6)
+    val prim = reads.first()
     CardFrame(modifier) {
         val d = LocalDensity.current
-        val small = with(d) { minOf(maxWidth * 0.07f, maxHeight * 0.09f).toSp() }
-        val bigv = with(d) { minOf(maxWidth * 0.13f, maxHeight * 0.17f).toSp() }
-        Column(Modifier.fillMaxSize()) {
-            TitleRow(title, reads[0].unit, small)
-            Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                reads.forEachIndexed { i, r ->
-                    Column {
-                        Text(r.text(), color = r.color, fontSize = if (i == 0) bigv else small, fontWeight = if (i == 0) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
-                        if (!oled) Text(r.label.take(16), color = GaugeGrey, fontSize = small, maxLines = 1)
-                    }
-                }
-            }
-            Canvas(Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp)) {
+        val txt = prim.text()
+        val small = with(d) { minOf(maxWidth * 0.075f, maxHeight * 0.09f).toSp() }
+        val big = with(d) { minOf(maxWidth * 0.92f / (txt.length.coerceAtLeast(2) * 0.6f), maxHeight * 0.28f).toSp() }
+        val mid = with(d) { minOf(maxWidth * 0.13f, maxHeight * 0.14f).toSp() }
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            TitleRow(title, small)
+            Text(txt, color = prim.color, fontSize = big, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (reads.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                reads.drop(1).forEach { r -> Text(r.text(), color = r.color, fontSize = mid, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+            } else Text(prim.unit, color = GaugeGrey, fontSize = small, maxLines = 1)
+            Canvas(Modifier.fillMaxWidth(0.92f).weight(1f).padding(top = 4.dp)) {
                 val w = size.width; val h = size.height
-                for (k in 0..3) { val y = h * k / 3f; drawLine(Color(0x22FFFFFF), Offset(0f, y), Offset(w, y), 1f) }
+                for (k in 0..2) { val y = h * k / 2f; drawLine(Color(0x22FFFFFF), Offset(0f, y), Offset(w, y), 1f) }
                 if (warn != null) {
                     val wy = h * (1f - ((warn - min) / span).toFloat().coerceIn(0f, 1f))
                     drawLine(Color(0x88FF4D4D), Offset(0f, wy), Offset(w, wy), 2f)
@@ -284,16 +280,16 @@ private fun CurveGauge(title: String, reads: List<Reading>, min: Double, max: Do
                             lx = x; ly = y
                         }
                     }
-                    drawPath(path, color.copy(alpha = 0.18f), style = Stroke(9f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    drawPath(path, color, style = Stroke(3.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                    if (hs.isNotEmpty() && !hs.last().isNaN()) drawCircle(color, 5f, Offset(lx, ly))
+                    drawPath(path, color.copy(alpha = 0.20f), style = Stroke(10f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    drawPath(path, color, style = Stroke(4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                    if (hs.isNotEmpty() && !hs.last().isNaN()) drawCircle(color, 6f, Offset(lx, ly))
                 }
             }
         }
     }
 }
 
-/** Valeur numérique : grand chiffre lisible, lectures supplémentaires dessous, min/max de la session. */
+/** Valeur numérique : le chiffre prend toute la place disponible (taille calculée d'après le nombre de caractères). */
 @Composable
 private fun NumericGauge(title: String, reads: List<Reading>, warn: Double?, modifier: Modifier) {
     val oled = LocalOled.current
@@ -305,49 +301,52 @@ private fun NumericGauge(title: String, reads: List<Reading>, warn: Double?, mod
     CardFrame(modifier) {
         val d = LocalDensity.current
         val multi = reads.size > 1
-        val big = with(d) { minOf(maxWidth * (if (multi) 0.2f else 0.27f), maxHeight * (if (multi) 0.3f else 0.42f)).toSp() }
+        val txt = prim.text()
+        val big = with(d) { minOf(maxWidth * 0.94f / (txt.length.coerceAtLeast(2) * 0.58f), maxHeight * (if (multi) 0.36f else 0.52f)).toSp() }
         val small = with(d) { minOf(maxWidth * 0.075f, maxHeight * 0.1f).toSp() }
+        val mid = with(d) { minOf(maxWidth * 0.11f, maxHeight * 0.13f).toSp() }
         val l = lo; val h = hi
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween, horizontalAlignment = Alignment.CenterHorizontally) {
-            TitleRow(title, prim.unit, small)
-            Text(prim.text(), color = if (hot) GaugeRed else Color.White, fontSize = big, fontWeight = FontWeight.Bold, maxLines = 1)
-            if (multi) Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                reads.drop(1).forEach { r -> Text(if (oled) "● ${r.text()} ${r.unit}" else "● ${r.text()} ${r.unit}  ${r.label.take(18)}", color = r.color, fontSize = small, maxLines = 1) }
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            TitleRow(title, small)
+            Text(txt, color = if (hot) GaugeRed else Color.White, fontSize = big, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (prim.unit.isNotEmpty()) Text(prim.unit, color = GaugeGrey, fontSize = small, maxLines = 1)
+            if (multi) reads.drop(1).forEach { r ->
+                Text(if (oled) "● ${r.text()}" else "● ${r.text()} ${r.unit}  ${tr(r.label).take(18)}", color = r.color, fontSize = mid, maxLines = 1)
             }
             if (!oled && l != null && h != null) Text("min %.${prim.decimals}f · max %.${prim.decimals}f".format(l, h), color = GaugeGrey, fontSize = small, maxLines = 1)
         }
     }
 }
 
-/** Barre : une par lecture. Variantes automatiques : simple, température (échelle bleu→rouge) ou centrée (±). */
+/** Barre : titre centré, valeur centrée au-dessus de chaque barre. Variantes automatiques : simple, température (bleu→rouge) ou centrée (±). */
 @Composable
 private fun BarGauge(title: String, reads: List<Reading>, min: Double, max: Double, warn: Double?, kind: Kind, modifier: Modifier) {
     CardFrame(modifier) {
         val d = LocalDensity.current
         val rows = reads.size
-        val small = with(d) { minOf(maxWidth * 0.07f, maxHeight * 0.1f).toSp() }
-        val big = with(d) { minOf(maxWidth * 0.17f, maxHeight * (if (rows > 1) 0.18f else 0.28f)).toSp() }
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            TitleRow(title, reads[0].unit, small)
-            reads.forEachIndexed { i, r -> BarRow(r, min, max, if (i == 0) warn else null, kind, big, small, Modifier.weight(1f).fillMaxWidth()) }
+        val small = with(d) { minOf(maxWidth * 0.075f, maxHeight * 0.1f).toSp() }
+        val txtLen = reads.maxOf { it.text().length }.coerceAtLeast(2)
+        val big = with(d) { minOf(maxWidth * 0.9f / (txtLen * 0.6f), maxHeight * (if (rows > 1) 0.2f else 0.32f)).toSp() }
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            TitleRow(title, small)
+            reads.forEachIndexed { i, r -> BarRow(r, min, max, if (i == 0) warn else null, kind, big, small, rows > 1, Modifier.weight(1f).fillMaxWidth()) }
         }
     }
 }
 
 @Composable
-private fun BarRow(r: Reading, min: Double, max: Double, warn: Double?, kind: Kind, big: TextUnit, small: TextUnit, modifier: Modifier) {
+private fun BarRow(r: Reading, min: Double, max: Double, warn: Double?, kind: Kind, big: TextUnit, small: TextUnit, showLabel: Boolean, modifier: Modifier) {
     val span = (max - min).coerceAtLeast(1e-6)
     val frac by animateFloatAsState(fracOf(r.value, min, span), tween(220), label = "bar")
     val mid = (min + max) / 2
     val v = r.value
     val hot = v != null && warn != null && (if (kind == Kind.CENTER) abs(v - mid) >= warn else v >= warn)
     val tip = if (hot) GaugeRed else rampColor(r.color, if (kind == Kind.PLAIN) rampQ(v, min, warn) else 0f)
-    Column(modifier, verticalArrangement = Arrangement.Center) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) {
-            Text(r.text(), color = if (hot) GaugeRed else Color.White, fontSize = big, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(r.label.take(20), color = r.color, fontSize = small, maxLines = 1)
-        }
-        Canvas(Modifier.fillMaxWidth().height(12.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(r.text(), color = if (hot) GaugeRed else Color.White, fontSize = big, fontWeight = FontWeight.Bold, maxLines = 1)
+        if (showLabel) Text(r.label, color = r.color, fontSize = small, maxLines = 1)
+        else if (r.unit.isNotEmpty()) Text(r.unit, color = GaugeGrey, fontSize = small, maxLines = 1)
+        Canvas(Modifier.fillMaxWidth(0.9f).height(12.dp).padding(top = 2.dp)) {
             val w = size.width; val h = size.height; val cr = CornerRadius(h / 2)
             when (kind) {
                 Kind.PLAIN -> {
@@ -391,7 +390,7 @@ fun GaugePage(gauges: List<GaugeCfg>, values: Map<String, Double>, custom: List<
     val cells = gauges.take(12)
     val cols = when { cells.size <= 2 -> 1; cells.size <= 6 -> 2; else -> 3 }
     Column(modifier.fillMaxSize()) {
-        if (cells.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { Text("Page vide : appuie sur ＋", color = GaugeGrey) }
+        if (cells.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) { Text("Page vide : appuyer sur ＋", color = GaugeGrey) }
         cells.chunked(cols).forEachIndexed { rowIdx, row ->
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 row.forEachIndexed { colIdx, g ->

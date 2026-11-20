@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.elmdash.core.*
+import fr.elmdash.core.Text
 
 /** Codes défaut : témoin moteur, lecture, effacement. */
 @Composable
@@ -32,7 +33,7 @@ fun DtcScreen(onBack: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MilBadge(true, count)
                     Spacer(Modifier.width(8.dp))
-                    Text(if (mil) "ALLUMÉ : $count code(s) mémorisé(s)" else if (count > 0) "Éteint, mais $count code(s) en mémoire" else "Éteint, aucun code", fontSize = 15.sp)
+                    Text(if (mil) trf("ALLUMÉ : %d code(s) mémorisé(s)", count) else if (count > 0) trf("Éteint, mais %d code(s) en mémoire", count) else "Éteint, aucun code", fontSize = 15.sp)
                 }
                 LinkLeds(link, 12.dp, labels = true)
             }
@@ -40,7 +41,7 @@ fun DtcScreen(onBack: () -> Unit) {
                 Button({ Telemetry.dtcRequest.value = "READ" }, enabled = live && !busy && req == null) { Text(if (busy) "Lecture…" else "Lire les codes") }
                 OutlinedButton({ confirm = true }, enabled = live && !busy && req == null) { Text("Effacer les codes") }
             }
-            if (!live) Text("Connecte-toi au boîtier pour lire les codes.", fontSize = 12.sp, color = GaugeGrey)
+            if (!live) Text("Connecter le boîtier pour lire les codes.", fontSize = 12.sp, color = GaugeGrey)
             if (list.isEmpty()) Text("Aucun code lu pour l'instant.", color = GaugeGrey, fontSize = 13.sp)
             list.forEach { code ->
                 Section(code) { Text(Dtc.describe(code), fontSize = 14.sp) }

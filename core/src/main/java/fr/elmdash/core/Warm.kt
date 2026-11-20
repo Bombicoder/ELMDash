@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
  *  surchauffe (3)   : clignotement rouge + vibration longue
  */
 class WarmUi(val phase: Int, val progress: Float, val temp: Double, val color: Color, val pulse: Float, val ripple: Float) {
-    fun text() = when (phase) { 0 -> "Froid ${temp.roundToInt()}°"; 1 -> "Prêt ✓ ${temp.roundToInt()}°"; else -> "Surchauffe ${temp.roundToInt()}°" }
+    fun text(): String = when (phase) { 0 -> trf("Froid %d°", temp.roundToInt()); 1 -> trf("Prêt ✓ %d°", temp.roundToInt()); else -> trf("Surchauffe %d°", temp.roundToInt()) }
 }
 
 val LocalWarm = compositionLocalOf<WarmUi?> { null }

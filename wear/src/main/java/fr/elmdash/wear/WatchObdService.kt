@@ -15,7 +15,7 @@ import fr.elmdash.core.*
 import kotlinx.coroutines.*
 
 class WearApp : android.app.Application() {
-    override fun onCreate() { super.onCreate(); CrashReport.install(this) }
+    override fun onCreate() { super.onCreate(); CrashReport.install(this); WatchState.ensure(this) }
 }
 
 /** Connexion DIRECTE de la montre au boîtier ELM327 (sans téléphone). */
@@ -29,13 +29,13 @@ class WatchObdService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         WatchState.ensure(this)
         if (Build.VERSION.SDK_INT >= 31 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            Telemetry.link.value = Link.OFF; Telemetry.status.value = "Autorise Bluetooth pour ElmDash (réglages de la montre)"
+            Telemetry.link.value = Link.OFF; Telemetry.status.value = "Autorisation Bluetooth requise pour ELMDash (réglages de la montre)"
             stopSelf(); return START_NOT_STICKY
         }
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("obd", "OBD", NotificationManager.IMPORTANCE_LOW))
         val n: Notification = NotificationCompat.Builder(this, "obd").setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle("ElmDash").setContentText("Connexion directe au boîtier").build()
+            .setContentTitle("ElmDash").setContentText(tr("Connexion directe au boîtier")).build()
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) else startForeground(1, n)
         } catch (e: Exception) { Telemetry.status.value = "Service refusé : ${e.javaClass.simpleName}"; stopSelf(); return START_NOT_STICKY }

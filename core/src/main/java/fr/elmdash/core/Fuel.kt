@@ -51,6 +51,8 @@ class FuelEngine {
             }
         }
         if (lh != null) {
+            out["FUEL_RAW_LH"] = lh                        // débit brut, sert à l'étalonnage
+            lh *= s.fuelCal.coerceIn(0.3, 3.0)              // débit corrigé par l'étalonnage plein à plein
             out["FUEL_LH"] = lh
             out["FUEL_L100"] = if (speed > 3) (lh / speed * 100.0).coerceAtMost(99.0) else 0.0
             tripL += lh * dt / 3600.0; tripKm += speed * dt / 3600.0; tripSec += dt

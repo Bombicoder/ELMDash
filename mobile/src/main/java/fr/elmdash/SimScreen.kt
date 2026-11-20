@@ -13,12 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.elmdash.core.*
+import fr.elmdash.core.Text
 import kotlin.math.roundToInt
 
 @Composable
 private fun SimSlider(label: String, value: Double, range: ClosedFloatingPointRange<Float>, enabled: Boolean, fmt: String, onChange: (Double) -> Unit) {
     Column {
-        Text("$label : " + fmt.format(value) + if (!enabled) "  (piloté par le scénario)" else "", fontSize = 13.sp, color = if (enabled) androidx.compose.ui.graphics.Color.White else GaugeGrey)
+        Text(tr(label) + " : " + fmt.format(value) + if (!enabled) "  " + tr("(piloté par le scénario)") else "", fontSize = 13.sp, color = if (enabled) androidx.compose.ui.graphics.Color.White else GaugeGrey)
         Slider(value.toFloat().coerceIn(range.start, range.endInclusive), { onChange(it.toDouble()) }, valueRange = range, enabled = enabled)
     }
 }
@@ -46,13 +47,13 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
                 }
                 LinkLeds(link, 14.dp, labels = true)
                 Text(status, fontSize = 12.sp, color = GaugeGrey)
-                Text("La montre reçoit exactement les mêmes valeurs : ouvre son appli pour voir comment elle réagit.", fontSize = 12.sp, color = GaugeGrey)
+                Text("La montre reçoit exactement les mêmes valeurs : ouvrir son application pour voir le rendu.", fontSize = 12.sp, color = GaugeGrey)
             }
             Section("Scénario") {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Scenario.values().forEach { sc -> FilterChip(selected = sim.scenario == sc, onClick = { Sim.update { it.copy(scenario = sc) } }, label = { Text(sc.label) }) }
                 }
-                if (tempAuto) Text(if (sim.scenario == Scenario.COLD) "Moteur à 14 °C qui monte d'environ 1 °C/s : tu verras la jauge de chauffe, le clignotement vert à 'prêt' et la vibration."
+                if (tempAuto) Text(if (sim.scenario == Scenario.COLD) "Moteur à 14 °C qui monte d'environ 1 °C/s : la jauge de chauffe, le clignotement vert à « prêt » et la vibration sont visibles sur le cadran."
                     else "L'eau monte jusqu'à 120 °C : clignotement rouge + vibration longue.", fontSize = 12.sp, color = GaugeGrey)
                 OutlinedButton({ Sim.t0 = System.nanoTime(); Telemetry.tripReset.value = true }) { Text("Redémarrer le scénario + trajet à zéro") }
             }
@@ -82,7 +83,7 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
                 Text("Le téléphone et la montre peuvent lire puis effacer ces codes.", fontSize = 12.sp, color = GaugeGrey)
             }
             Section("Test : montée en température") {
-                Text("1) Coche « Afficher la montée en température » sur un cadran (touche le cadran). 2) Lance un test ci-dessous. 3) Ouvre ce cadran sur la montre.", fontSize = 12.sp, color = GaugeGrey)
+                Text("1) Cocher « Afficher la montée en température » sur un cadran (le toucher pour l'ouvrir). 2) Lancer un test ci-dessous. 3) Ouvrir ce cadran sur la montre.", fontSize = 12.sp, color = GaugeGrey)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button({
                         app.updateSettings(s.copy(simulate = true))
@@ -99,8 +100,8 @@ fun SimScreen(app: AppState, onBack: () -> Unit) {
                 }
             }
             Section("Toutes les données (curseurs)") {
-                Text("Déplace un curseur pour forcer la valeur de n'importe quelle donnée ; « auto » rend la main au scénario. Les consommations se recalculent seules, sauf si tu les forces.", fontSize = 12.sp, color = GaugeGrey)
-                OutlinedButton({ Sim.update { it.copy(overrides = emptyMap()) } }, enabled = sim.overrides.isNotEmpty()) { Text("Tout remettre en auto (${sim.overrides.size})") }
+                Text("Déplacer un curseur pour forcer la valeur de n'importe quelle donnée ; « auto » rend la main au scénario. Les consommations se recalculent seules, sauf si elles sont forcées.", fontSize = 12.sp, color = GaugeGrey)
+                OutlinedButton({ Sim.update { it.copy(overrides = emptyMap()) } }, enabled = sim.overrides.isNotEmpty()) { Text(trf("Tout remettre en auto (%d)", sim.overrides.size)) }
             }
             Pids.allMeta(emptyList()).groupBy { it.group }.forEach { (group, list) ->
                 Section(group) { list.forEach { m -> OverrideRow(m, sim.overrides[m.id]) } }
@@ -123,7 +124,7 @@ private fun OverrideRow(m: Meta, value: Double?) {
     val v = value ?: ((m.min + m.max) / 2)
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${m.label} : " + (if (value == null) "auto" else "%.${m.decimals}f ${m.unit}".format(value)), fontSize = 12.sp,
+            Text(tr(m.label) + " : " + (if (value == null) tr("auto") else "%.${m.decimals}f ${m.unit}".format(value)), fontSize = 12.sp,
                 color = if (value == null) GaugeGrey else androidx.compose.ui.graphics.Color.White, modifier = Modifier.weight(1f))
             if (value != null) TextButton({ Sim.update { st -> st.copy(overrides = st.overrides - m.id) } }) { Text("auto") }
         }

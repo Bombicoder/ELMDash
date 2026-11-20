@@ -30,7 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
+import fr.elmdash.core.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -82,6 +82,7 @@ object WatchState {
         val p = sp(c)
         direct.value = p.getBoolean("direct", false); sim.value = p.getBoolean("sim", false); mac.value = p.getString("mac", "") ?: ""
         bright.value = p.getFloat("bright", 0.8f); scale.value = p.getFloat("scale", 1f); rot.value = p.getFloat("rot", 0f)
+        I18n.set(p.getString("lang", "") ?: "")
         p.getString("cfg", null)?.let { applyConfig(c, it, false) }
     }
     fun setDirect(c: Context, v: Boolean) { direct.value = v; sp(c).edit().putBoolean("direct", v).apply() }
@@ -90,12 +91,13 @@ object WatchState {
     fun setBright(c: Context, v: Float) { bright.value = v.coerceIn(0.05f, 1f); sp(c).edit().putFloat("bright", bright.value).apply() }
     fun addBright(c: Context, d: Float) = setBright(c, ((bright.value + d) * 20).roundToInt() / 20f)
     fun setScale(c: Context, v: Float) { scale.value = v.coerceIn(0.6f, 1.6f); sp(c).edit().putFloat("scale", scale.value).apply() }
+    fun setLang(c: Context, code: String) { I18n.set(code); sp(c).edit().putString("lang", code).apply() }
     fun setRot(c: Context, v: Float) { rot.value = ((v % 360f) + 360f) % 360f; sp(c).edit().putFloat("rot", rot.value).apply() }
 
     fun applyConfig(c: Context, json: String, applyScale: Boolean = true) {
         runCatching { Codec.configFromJson(json) }.onSuccess { cfg ->
             pages.value = cfg.pages; custom.value = cfg.custom; warm.value = cfg.warm; settings.value = cfg.settings
-            if (applyScale) setScale(c, cfg.settings.watchScale.toFloat())   // la taille réglée sur le téléphone s'applique à la montre
+            if (applyScale) { setScale(c, cfg.settings.watchScale.toFloat()); if (cfg.settings.lang.isNotEmpty()) setLang(c, cfg.settings.lang) }   // la taille réglée sur le téléphone s'applique à la montre
             sp(c).edit().putString("cfg", json).apply()
         }
     }
@@ -270,10 +272,10 @@ fun WatchDtcPage(isCurrent: Boolean) {
     WatchScrollPage(isCurrent) {
         Text("Codes défaut", fontSize = 13.sp, color = Color.White)
         Text(if (mil) "⚠ Témoin moteur ALLUMÉ" else "Témoin moteur éteint", fontSize = 12.sp, color = if (mil) GaugeAmber else GaugeGreen)
-        if (count > 0 && list.isEmpty()) Text("$count code(s) à lire", fontSize = 11.sp, color = GaugeGrey)
+        if (count > 0 && list.isEmpty()) Text(trf("%d code(s) à lire", count), fontSize = 11.sp, color = GaugeGrey)
         Chip(if (busy) "Lecture…" else "Lire les codes") { request("READ") }
         Chip(if (confirm) "Confirmer l'effacement ?" else "Effacer", confirm) { if (confirm) { request("CLEAR"); confirm = false } else confirm = true }
-        list.forEach { code -> Text("$code\n${Dtc.describe(code)}", fontSize = 10.sp, color = Color.White, textAlign = TextAlign.Center) }
+        list.forEach { code -> Text(code + "\n" + tr(Dtc.describe(code)), fontSize = 10.sp, color = Color.White, textAlign = TextAlign.Center) }
     }
 }
 
@@ -291,15 +293,16 @@ fun WatchSettingsPage(isCurrent: Boolean) {
         Text(status, fontSize = 9.sp, color = GaugeGrey, textAlign = TextAlign.Center)
         Chip(if (direct) "Connexion directe : OUI" else "Connexion directe : NON", direct) { WatchState.setDirect(ctx, !direct) }
         Chip(if (sim) "Simulation : oui" else "Simulation : non", sim) { WatchState.setSim(ctx, !sim) }
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { Lang.values().forEach { l -> Chip(l.flag, I18n.lang == l) { WatchState.setLang(ctx, l.code) } } }
         Text("Boîtier (appairé à la montre)", fontSize = 10.sp, color = GaugeGrey)
         devices.forEach { (n, a) -> Chip(n, mac == a) { WatchState.setMac(ctx, a) } }
-        if (devices.isEmpty()) Text("Appaire l'ELM327 dans Réglages › Connectivité › Bluetooth de la montre", fontSize = 9.sp, color = GaugeGrey, textAlign = TextAlign.Center)
-        Text("Taille du cadran ${(scale * 100).roundToInt()} %", fontSize = 11.sp, color = Color.White)
+        if (devices.isEmpty()) Text("Appairer l'ELM327 dans Réglages › Connectivité › Bluetooth de la montre", fontSize = 9.sp, color = GaugeGrey, textAlign = TextAlign.Center)
+        Text(trf("Taille du cadran %d %%", (scale * 100).roundToInt()), fontSize = 11.sp, color = Color.White)
         Slider(scale, { WatchState.setScale(ctx, it) }, valueRange = 0.6f..1.6f, modifier = Modifier.width(150.dp))
-        Text("Rotation (couronne) ${rot.roundToInt()}°", fontSize = 11.sp, color = Color.White)
+        Text(trf("Rotation (couronne) %d°", rot.roundToInt()), fontSize = 11.sp, color = Color.White)
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf(0f, 90f, 180f, 270f).forEach { a -> Chip("${a.toInt()}°", rot == a) { WatchState.setRot(ctx, a) } } }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Chip("−5°") { WatchState.setRot(ctx, rot - 5f) }; Chip("+5°") { WatchState.setRot(ctx, rot + 5f) } }
-        Text("Luminosité ${(bright * 100).roundToInt()} %", fontSize = 11.sp, color = Color.White)
+        Text(trf("Luminosité %d %%", (bright * 100).roundToInt()), fontSize = 11.sp, color = Color.White)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Chip("−") { WatchState.addBright(ctx, -0.1f) }; Chip("+") { WatchState.addBright(ctx, 0.1f) } }
         Text("Double-tap en haut / en bas de l'écran : luminosité. Molette : changer de page.", fontSize = 9.sp, color = GaugeGrey, textAlign = TextAlign.Center)
     }

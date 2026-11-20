@@ -8,20 +8,25 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -30,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.elmdash.core.GaugeCyan
 import fr.elmdash.core.GaugeGrey
+import fr.elmdash.core.Lang
+import fr.elmdash.core.Text
 
 fun fmtNum(v: Double) = if (v % 1.0 == 0.0) v.toInt().toString() else v.toString()
 
@@ -71,4 +78,26 @@ fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
         Text(title, color = GaugeCyan, fontSize = 15.sp)
         content()
     }
+}
+
+/** Drapeau cliquable : ouvre la liste des langues. */
+@Composable
+fun LangPicker(current: Lang, onPick: (Lang) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Text(current.flag, fontSize = 24.sp, modifier = Modifier.clickable { open = true }.padding(horizontal = 8.dp))
+    if (open) AlertDialog(
+        onDismissRequest = { open = false },
+        title = { Text("Langue") },
+        text = {
+            Column {
+                Lang.values().forEach { l ->
+                    Row(Modifier.fillMaxWidth().clickable { onPick(l); open = false }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(l.flag, fontSize = 26.sp); Spacer(Modifier.width(14.dp)); Text(l.label, fontSize = 17.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton({ open = false }) { Text("Fermer") } }
+    )
 }
